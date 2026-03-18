@@ -1,6 +1,12 @@
 # Compiled class file
 *.class
 
+# enviroment variable file
+*.env
+
+# test reports
+target/
+
 # Log file
 *.log
 
