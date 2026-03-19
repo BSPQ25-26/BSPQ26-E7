@@ -10,4 +10,5 @@ public interface EquipmentService {
     List<Equipment> getAllEquipment();
     Equipment updateEquipment(Long id, Equipment equipment);
     void deleteEquipment(Long id);
+    Equipment reserveEquipment(Long id);
 }

@@ -49,4 +49,16 @@ public class EquipmentController {
         equipmentService.deleteEquipment(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}/reserve")
+    public ResponseEntity<?> reserveEquipment(@PathVariable Long id) {
+        try {
+            Equipment reserved = equipmentService.reserveEquipment(id);
+            return ResponseEntity.ok(reserved);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }
