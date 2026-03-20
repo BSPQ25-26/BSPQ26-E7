@@ -14,7 +14,7 @@ public class Equipment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    private String name;
     private String type;
     
     @Enumerated(EnumType.STRING)
