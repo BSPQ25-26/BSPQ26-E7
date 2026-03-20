@@ -1,6 +1,7 @@
 package com.lablend.backend.service.impl;
 
 import com.lablend.backend.entity.Equipment;
+import com.lablend.backend.entity.EquipmentStatus;
 import com.lablend.backend.entity.Loan;
 import com.lablend.backend.entity.LoanStatus;
 import com.lablend.backend.repository.EquipmentRepository;
@@ -25,20 +26,17 @@ public class LoanServiceImpl implements LoanService {
 
     @Override
     public Loan createLoan(Loan loan) {
-        // Verify the equipment exists and is available
         Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
                 .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
 
-        if (!"Available".equalsIgnoreCase(equipment.getStatus())) {
+        if (equipment.getStatus() != EquipmentStatus.AVAILABLE) {
             throw new RuntimeException("Equipment is not available for loan. Current status: " + equipment.getStatus());
         }
 
-        // Set loan defaults
         loan.setLoanDate(LocalDateTime.now());
         loan.setStatus(LoanStatus.ACTIVE);
 
-        // Mark equipment as loaned
-        equipment.setStatus("Loaned");
+        equipment.setStatus(EquipmentStatus.RESERVED);
         equipmentRepository.save(equipment);
 
         return loanRepository.save(loan);
@@ -51,11 +49,14 @@ public class LoanServiceImpl implements LoanService {
 
     @Override
     public java.util.Optional<Loan> getLoanById(Long id) {
+        if (id == null) throw new IllegalArgumentException("Id cannot be null");
         return loanRepository.findById(id);
     }
 
     @Override
     public Loan updateLoan(Long id, Loan loanDetails) {
+        if (id == null) throw new IllegalArgumentException("Id cannot be null");
+        
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
 
@@ -68,6 +69,8 @@ public class LoanServiceImpl implements LoanService {
 
     @Override
     public void deleteLoan(Long id) {
+        if (id == null) throw new IllegalArgumentException("Id cannot be null");
+        
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
         loanRepository.delete(loan);
