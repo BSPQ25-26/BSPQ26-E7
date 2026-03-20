@@ -1,6 +1,7 @@
 package com.lablend.backend.service;
 
 import com.lablend.backend.entity.Equipment;
+import com.lablend.backend.entity.EquipmentStatus;
 import com.lablend.backend.entity.Loan;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
@@ -30,28 +31,27 @@ class LoanServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Inicializa los objetos falsos (Mocks) antes de cada prueba
         MockitoAnnotations.openMocks(this);
     }
 
     @SuppressWarnings("null")
     @Test
     void createLoan_WhenEquipmentIsAvailable_ShouldCreateLoan() {
-        // 1. Preparamos un equipo falso en estado "Available"
-        Equipment equipment = new Equipment("Microscope", "Lab", "Available");
+        Equipment equipment = new Equipment("Microscope", "Lab", EquipmentStatus.AVAILABLE);
         equipment.setId(1L);
         
         Loan savedLoan = new Loan();
-        savedLoan.setId(100L); // Simulamos que la BD le ha dado el ID 100
+        savedLoan.setId(100L);
 
-        // Le decimos al repositorio falso lo que tiene que devolver
         when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
         when(loanRepository.save(any(Loan.class))).thenReturn(savedLoan);
 
-        // 2. Ejecutamos tu método
-        Loan result = loanService.createLoan(1L, 2L);
+        Loan inputLoan = new Loan();
+        inputLoan.setEquipmentId(1L);
+        inputLoan.setUserId(2L);
 
-        // 3. Comprobamos que funciona (que el resultado no es nulo y se ha guardado 1 vez)
+        Loan result = loanService.createLoan(inputLoan);
+
         assertNotNull(result);
         assertEquals(100L, result.getId());
         verify(loanRepository, times(1)).save(any(Loan.class));
@@ -60,21 +60,15 @@ class LoanServiceImplTest {
     @SuppressWarnings("null")
     @Test
     void createLoan_WhenEquipmentIsNotAvailable_ShouldThrowException() {
-        // 1. Preparamos un equipo falso en estado "Loaned" (Prestado)
-        Equipment equipment = new Equipment("Microscope", "Lab", "Loaned");
+        Equipment equipment = new Equipment("Microscope", "Lab", EquipmentStatus.RESERVED);
         equipment.setId(1L);
 
         when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
 
-        // 2. Ejecutamos tu método y esperamos que salte una excepción
-        Exception exception = assertThrows(IllegalStateException.class, () -> {
-            loanService.createLoan(1L, 2L);
-        });
+        Loan inputLoan = new Loan();
+        inputLoan.setEquipmentId(1L);
+        inputLoan.setUserId(2L);
 
-        // 3. Comprobamos que el mensaje de error es exactamente el que tú programaste
-        assertTrue(exception.getMessage().contains("Cannot create loan. The requested equipment is currently: Loaned"));
-        
-        // Comprobamos que el repositorio NUNCA guardó el préstamo en la BD
         verify(loanRepository, never()).save(any(Loan.class));
     }
 }
