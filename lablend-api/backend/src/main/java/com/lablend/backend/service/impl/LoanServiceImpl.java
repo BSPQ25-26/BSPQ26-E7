@@ -2,6 +2,7 @@ package com.lablend.backend.service.impl;
 
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.Loan;
+import com.lablend.backend.entity.LoanStatus;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
 import com.lablend.backend.service.LoanService;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 public class LoanServiceImpl implements LoanService {
@@ -23,25 +25,52 @@ public class LoanServiceImpl implements LoanService {
     }
 
     @Override
-    public Loan createLoan(Long equipmentId, Long userId) {
+    public Loan createLoan(Loan loan) {
+        // Verify the equipment exists and is available
+        Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
+                .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
+
+        if (!"Available".equalsIgnoreCase(equipment.getStatus())) {
+            throw new RuntimeException("Equipment is not available for loan. Current status: " + equipment.getStatus());
+        }
+
+        // Set loan defaults
+        loan.setLoanDate(LocalDateTime.now());
+        loan.setStatus(LoanStatus.ACTIVE);
+
+        // Mark equipment as loaned
+        equipment.setStatus("Loaned");
+        equipmentRepository.save(equipment);
+
+        return loanRepository.save(loan);
+    }
+
+    @Override
+    public java.util.List<Loan> getAllLoans() {
+        return loanRepository.findAll();
+    }
+
+    @Override
+    public java.util.Optional<Loan> getLoanById(Long id) {
+        return loanRepository.findById(id);
+    }
+
+    @Override
+    public Loan updateLoan(Long id, Loan loanDetails) {
+        Loan loan = loanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
+
+        loan.setUserId(loanDetails.getUserId());
+        loan.setEquipmentId(loanDetails.getEquipmentId());
+        loan.setStatus(loanDetails.getStatus());
         
-        if (equipmentId == null) {
-            throw new IllegalArgumentException("Error: Equipment ID cannot be null");
-        }
+        return loanRepository.save(loan);
+    }
 
-        Equipment equipment = equipmentRepository.findById(equipmentId)
-                .orElseThrow(() -> new RuntimeException("Error: Equipment not found with ID: " + equipmentId));
-
-        if (equipment.getStatus() == null || !equipment.getStatus().equalsIgnoreCase("Available")) {
-            throw new IllegalStateException("Cannot create loan. The requested equipment is currently: " + equipment.getStatus());
-        }
- 
-        Loan newLoan = new Loan();
-        newLoan.setEquipmentId(equipmentId);
-        newLoan.setUserId(userId);
-        newLoan.setLoanDate(LocalDate.now());
-        newLoan.setStatus("Active");
-
-        return loanRepository.save(newLoan);
+    @Override
+    public void deleteLoan(Long id) {
+        Loan loan = loanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
+        loanRepository.delete(loan);
     }
 }

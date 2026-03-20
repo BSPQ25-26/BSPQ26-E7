@@ -1,6 +1,7 @@
 package com.lablend.backend.service;
 
 import com.lablend.backend.entity.Equipment;
+import com.lablend.backend.entity.EquipmentStatus;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.service.impl.EquipmentServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +35,8 @@ public class EquipmentServiceTest {
         equipment.setId(1L);
         equipment.setName("Microscope");
         equipment.setType("Optical");
-        equipment.setStatus("Available");
+        equipment.setStatus(EquipmentStatus.AVAILABLE);
+        equipment.setVersion(0L);
     }
 
     @Test
@@ -53,6 +55,41 @@ public class EquipmentServiceTest {
         assertEquals(1, equipmentList.size());
         assertEquals("Microscope", equipmentList.get(0).getName());
         verify(equipmentRepository, times(1)).findAll();
+    }
+
+    @Test
+    public void testReserveEquipmentSuccess() {
+        when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
+        when(equipmentRepository.save(any(Equipment.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Equipment result = equipmentService.reserveEquipment(1L);
+
+        assertNotNull(result);
+        assertEquals(EquipmentStatus.RESERVED, result.getStatus());
+        verify(equipmentRepository).save(any(Equipment.class));
+    }
+
+    @Test
+    public void testReserveEquipmentFail_AlreadyReserved() {
+        equipment.setStatus(EquipmentStatus.RESERVED);
+        when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
+
+        assertThrows(IllegalStateException.class, () -> {
+            equipmentService.reserveEquipment(1L);
+        });
+    }
+
+    @Test
+    public void testUpdateEquipmentWithStateTransition() {
+        Equipment updatedInfo = new Equipment("Microscope V2", "Optical", EquipmentStatus.RESERVED);
+        
+        when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
+        when(equipmentRepository.save(any(Equipment.class))).thenReturn(updatedInfo);
+
+        Equipment result = equipmentService.updateEquipment(1L, updatedInfo);
+
+        assertNotNull(result);
+        assertEquals(EquipmentStatus.RESERVED, result.getStatus());
     }
 
     @Test
