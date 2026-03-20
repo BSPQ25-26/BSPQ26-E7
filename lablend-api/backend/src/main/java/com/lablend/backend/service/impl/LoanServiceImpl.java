@@ -2,6 +2,7 @@ package com.lablend.backend.service.impl;
 
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.Loan;
+import com.lablend.backend.entity.LoanStatus;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
 import com.lablend.backend.service.LoanService;
@@ -34,7 +35,7 @@ public class LoanServiceImpl implements LoanService {
 
         // Set loan defaults
         loan.setLoanDate(LocalDateTime.now());
-        loan.setStatus("ACTIVE");
+        loan.setStatus(LoanStatus.ACTIVE);
 
         // Mark equipment as loaned
         equipment.setStatus("Loaned");

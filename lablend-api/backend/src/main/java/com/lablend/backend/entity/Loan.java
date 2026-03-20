@@ -6,6 +6,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 
 import java.time.LocalDateTime;
 
@@ -27,12 +29,13 @@ public class Loan {
     private LocalDateTime loanDate;
 
     @Column(name = "status", nullable = false)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private LoanStatus status;
 
     public Loan() {
     }
 
-    public Loan(Long userId, Long equipmentId, LocalDateTime loanDate, String status) {
+    public Loan(Long userId, Long equipmentId, LocalDateTime loanDate, LoanStatus status) {
         this.userId = userId;
         this.equipmentId = equipmentId;
         this.loanDate = loanDate;
@@ -71,11 +74,11 @@ public class Loan {
         this.loanDate = loanDate;
     }
 
-    public String getStatus() {
+    public LoanStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(LoanStatus status) {
         this.status = status;
     }
 }
