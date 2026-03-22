@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:mysql://db:3306/lablend_test_db
+    username: root
+    password: rootpassword
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
