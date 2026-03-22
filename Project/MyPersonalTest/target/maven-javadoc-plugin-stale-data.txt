@@ -1,0 +1,42 @@
+-J-Duser.language=
+-J-Duser.country=
+@options
+@packages
+--no-fonts
+-encoding
+'UTF-8'
+-protected
+--release
+17
+-sourcepath
+'C:/Users/antun/Desktop/Faks/2.5 god/2. sem (ESP)/SPQ/Project/MyPersonalTest/src/main/java'
+-author
+-bottom
+'Copyright &#169; 2026. All rights reserved.'
+-charset
+'UTF-8'
+-d
+'C:/Users/antun/Desktop/Faks/2.5 god/2. sem (ESP)/SPQ/Project/MyPersonalTest/target/reports/apidocs'
+-docencoding
+'UTF-8'
+-doctitle
+'MyPersonalTest 1.0-SNAPSHOT API'
+-use
+-version
+-windowtitle
+'MyPersonalTest 1.0-SNAPSHOT API'
+es.deusto.spq
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\src\main\java = 1774175439813
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\allclasses-index.html = 1774175593149
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\allpackages-index.html = 1774175593156
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\element-list = 1774175593075
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\help-doc.html = 1774175593217
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\index-all.html = 1774175593191
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\index.html = 1774175593206
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\member-search-index.js = 1774175593170
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\module-search-index.js = 1774175593160
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\overview-tree.html = 1774175593130
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\package-search-index.js = 1774175593163
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\search.html = 1774175593199
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\tag-search-index.js = 1774175593174
+C:\Users\antun\Desktop\Faks\2.5 god\2. sem (ESP)\SPQ\Project\MyPersonalTest\target\reports\apidocs\type-search-index.js = 1774175593166
