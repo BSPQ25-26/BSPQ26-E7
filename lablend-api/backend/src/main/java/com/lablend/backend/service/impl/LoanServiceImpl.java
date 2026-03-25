@@ -46,7 +46,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setLoanDate(LocalDateTime.now());
         loan.setStatus(LoanStatus.ACTIVE);
 
-        equipment.applyStateTransition(EquipmentStatus.RESERVED);
+        equipment.reserve();
         equipmentRepository.save(equipment);
 
         return loanRepository.save(loan);
@@ -79,7 +79,7 @@ public class LoanServiceImpl implements LoanService {
                     || loanDetails.getStatus() == LoanStatus.CANCELLED)) {
             Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
                     .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
-            equipment.applyStateTransition(EquipmentStatus.AVAILABLE);
+            equipment.setStatus(EquipmentStatus.AVAILABLE);
             equipmentRepository.save(equipment);
         }
 
@@ -102,7 +102,7 @@ public class LoanServiceImpl implements LoanService {
         if (loan.getStatus() == LoanStatus.ACTIVE) {
             Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
                     .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
-            equipment.applyStateTransition(EquipmentStatus.AVAILABLE);
+            equipment.setStatus(EquipmentStatus.AVAILABLE);
             equipmentRepository.save(equipment);
         }
 

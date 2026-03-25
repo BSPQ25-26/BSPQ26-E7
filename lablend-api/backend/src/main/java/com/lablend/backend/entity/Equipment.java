@@ -101,6 +101,35 @@ public class Equipment {
         this.status = EquipmentStatus.AVAILABLE;
     }
 
+    /**
+     * Applies a state transition after validating it is allowed.
+     *
+     * @param newStatus the target status
+     * @throws IllegalStateException if the transition is not valid
+     */
+    public void applyStateTransition(EquipmentStatus newStatus) {
+        if (this.status == newStatus) {
+            return;
+        }
+        switch (newStatus) {
+            case RESERVED:
+                reserve();
+                break;
+            case UNDER_MAINTENANCE:
+                startMaintenance();
+                break;
+            case AVAILABLE:
+                if (this.status == EquipmentStatus.RESERVED || this.status == EquipmentStatus.UNDER_MAINTENANCE) {
+                    this.status = EquipmentStatus.AVAILABLE;
+                } else {
+                    throw new IllegalStateException("Cannot transition to AVAILABLE from: " + this.status);
+                }
+                break;
+            default:
+                throw new IllegalStateException("Unknown status: " + newStatus);
+        }
+    }
+
 
     public Long getId() {
         return id;
