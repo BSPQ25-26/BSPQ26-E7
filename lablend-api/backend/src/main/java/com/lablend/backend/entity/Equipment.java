@@ -73,10 +73,10 @@ public class Equipment {
     /**
      * Reserves this equipment when it is available.
      *
-     * @throws IllegalStateException when the current status is not AVAILABLE or UNDER_MAINTENANCE
+     * @throws IllegalStateException when the current status is not AVAILABLE
      */
     public void reserve() {
-        if (this.status != EquipmentStatus.AVAILABLE && this.status != EquipmentStatus.UNDER_MAINTENANCE) {
+        if (this.status != EquipmentStatus.AVAILABLE) {
             throw new IllegalStateException("Solo se puede reservar equipo disponible. Estado actual: " + this.status);
         }
         this.status = EquipmentStatus.RESERVED;
@@ -99,35 +99,6 @@ public class Equipment {
      */
     public void finishMaintenance() {
         this.status = EquipmentStatus.AVAILABLE;
-    }
-
-    /**
-     * Applies a state transition after validating it is allowed.
-     *
-     * @param newStatus the target status
-     * @throws IllegalStateException if the transition is not valid
-     */
-    public void applyStateTransition(EquipmentStatus newStatus) {
-        if (this.status == newStatus) {
-            return;
-        }
-        switch (newStatus) {
-            case RESERVED:
-                reserve();
-                break;
-            case UNDER_MAINTENANCE:
-                startMaintenance();
-                break;
-            case AVAILABLE:
-                if (this.status == EquipmentStatus.RESERVED || this.status == EquipmentStatus.UNDER_MAINTENANCE) {
-                    this.status = EquipmentStatus.AVAILABLE;
-                } else {
-                    throw new IllegalStateException("Cannot transition to AVAILABLE from: " + this.status);
-                }
-                break;
-            default:
-                throw new IllegalStateException("Unknown status: " + newStatus);
-        }
     }
 
 
