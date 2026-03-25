@@ -12,18 +12,28 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+/**
+ * Implementation of {@link LoanService}.
+ */
 @Service
 public class LoanServiceImpl implements LoanService {
 
     private final LoanRepository loanRepository;
     private final EquipmentRepository equipmentRepository;
 
+    /**
+     * Constructs the service with required repositories.
+     *
+     * @param loanRepository      loan data access
+     * @param equipmentRepository equipment data access
+     */
     @Autowired
     public LoanServiceImpl(LoanRepository loanRepository, EquipmentRepository equipmentRepository) {
         this.loanRepository = loanRepository;
         this.equipmentRepository = equipmentRepository;
     }
 
+    /** {@inheritDoc} */
     @Override
     public Loan createLoan(Loan loan) {
         Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
@@ -42,17 +52,20 @@ public class LoanServiceImpl implements LoanService {
         return loanRepository.save(loan);
     }
 
+    /** {@inheritDoc} */
     @Override
     public java.util.List<Loan> getAllLoans() {
         return loanRepository.findAll();
     }
 
+    /** {@inheritDoc} */
     @Override
     public java.util.Optional<Loan> getLoanById(Long id) {
         if (id == null) throw new IllegalArgumentException("Id cannot be null");
         return loanRepository.findById(id);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Loan updateLoan(Long id, Loan loanDetails) {
         if (id == null) throw new IllegalArgumentException("Id cannot be null");
@@ -67,6 +80,7 @@ public class LoanServiceImpl implements LoanService {
         return loanRepository.save(loan);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void deleteLoan(Long id) {
         if (id == null) throw new IllegalArgumentException("Id cannot be null");
