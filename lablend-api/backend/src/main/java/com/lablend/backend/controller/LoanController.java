@@ -7,6 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * REST controller for {@link Loan} management operations.
+ */
 @RestController
 @RequestMapping("/api/loans")
 public class LoanController {
@@ -14,11 +17,22 @@ public class LoanController {
     @Autowired
     private LoanService loanService;
 
+    /**
+     * Retrieves all loan records.
+     *
+     * @return list of all loans
+     */
     @GetMapping
     public ResponseEntity<java.util.List<Loan>> getAllLoans() {
         return ResponseEntity.ok(loanService.getAllLoans());
     }
 
+    /**
+     * Retrieves a loan by its identifier.
+     *
+     * @param id loan identifier
+     * @return 200 with the loan when found, 404 otherwise
+     */
     @GetMapping("/{id}")
     public ResponseEntity<Loan> getLoanById(@PathVariable Long id) {
         return loanService.getLoanById(id)
@@ -26,6 +40,13 @@ public class LoanController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * Creates a new loan. The equipment must be available; its status
+     * will be changed to RESERVED upon success.
+     *
+     * @param loan loan payload (must include userId and equipmentId)
+     * @return 201 with the created loan, or 400 if the request is invalid
+     */
     @PostMapping
     public ResponseEntity<?> createLoan(@RequestBody Loan loan) {
         try {
@@ -36,6 +57,13 @@ public class LoanController {
         }
     }
 
+    /**
+     * Updates an existing loan record.
+     *
+     * @param id   loan identifier
+     * @param loan updated loan payload
+     * @return 200 with the updated loan, 404 when not found
+     */
     @PutMapping("/{id}")
     public ResponseEntity<Loan> updateLoan(@PathVariable Long id, @RequestBody Loan loan) {
         try {
@@ -46,6 +74,12 @@ public class LoanController {
         }
     }
 
+    /**
+     * Deletes a loan record by its identifier.
+     *
+     * @param id loan identifier
+     * @return 204 when deleted, 404 when not found
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteLoan(@PathVariable Long id) {
         try {

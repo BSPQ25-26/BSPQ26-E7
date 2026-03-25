@@ -11,18 +11,28 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+/**
+ * Implementation of {@link LoanService}.
+ */
 @Service
 public class LoanServiceImpl implements LoanService {
 
     private final LoanRepository loanRepository;
     private final EquipmentRepository equipmentRepository;
 
+    /**
+     * Constructs the service with required repositories.
+     *
+     * @param loanRepository      loan data access
+     * @param equipmentRepository equipment data access
+     */
     @Autowired
     public LoanServiceImpl(LoanRepository loanRepository, EquipmentRepository equipmentRepository) {
         this.loanRepository = loanRepository;
         this.equipmentRepository = equipmentRepository;
     }
 
+    /** {@inheritDoc} */
     @Override
     public Loan createLoan(Loan loan) {
         // Verify the equipment exists and is available
@@ -44,16 +54,19 @@ public class LoanServiceImpl implements LoanService {
         return loanRepository.save(loan);
     }
 
+    /** {@inheritDoc} */
     @Override
     public java.util.List<Loan> getAllLoans() {
         return loanRepository.findAll();
     }
 
+    /** {@inheritDoc} */
     @Override
     public java.util.Optional<Loan> getLoanById(Long id) {
         return loanRepository.findById(id);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Loan updateLoan(Long id, Loan loanDetails) {
         Loan loan = loanRepository.findById(id)
@@ -66,6 +79,7 @@ public class LoanServiceImpl implements LoanService {
         return loanRepository.save(loan);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void deleteLoan(Long id) {
         Loan loan = loanRepository.findById(id)
