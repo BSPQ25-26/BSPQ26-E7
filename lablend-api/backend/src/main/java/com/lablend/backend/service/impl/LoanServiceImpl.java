@@ -46,7 +46,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setLoanDate(LocalDateTime.now());
         loan.setStatus(LoanStatus.ACTIVE);
 
-        equipment.setStatus(EquipmentStatus.RESERVED);
+        equipment.applyStateTransition(EquipmentStatus.RESERVED);
         equipmentRepository.save(equipment);
 
         return loanRepository.save(loan);
@@ -73,6 +73,16 @@ public class LoanServiceImpl implements LoanService {
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
 
+        // Release equipment when the loan is completed or cancelled
+        if (loan.getStatus() == LoanStatus.ACTIVE
+                && (loanDetails.getStatus() == LoanStatus.COMPLETED
+                    || loanDetails.getStatus() == LoanStatus.CANCELLED)) {
+            Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
+                    .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
+            equipment.applyStateTransition(EquipmentStatus.AVAILABLE);
+            equipmentRepository.save(equipment);
+        }
+
         loan.setUserId(loanDetails.getUserId());
         loan.setEquipmentId(loanDetails.getEquipmentId());
         loan.setStatus(loanDetails.getStatus());
@@ -87,6 +97,15 @@ public class LoanServiceImpl implements LoanService {
         
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
+
+        // Release equipment if the loan being deleted is still active
+        if (loan.getStatus() == LoanStatus.ACTIVE) {
+            Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
+                    .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
+            equipment.applyStateTransition(EquipmentStatus.AVAILABLE);
+            equipmentRepository.save(equipment);
+        }
+
         loanRepository.delete(loan);
     }
 }

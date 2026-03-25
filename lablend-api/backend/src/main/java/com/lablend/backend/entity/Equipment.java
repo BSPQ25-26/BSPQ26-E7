@@ -73,10 +73,10 @@ public class Equipment {
     /**
      * Reserves this equipment when it is available.
      *
-     * @throws IllegalStateException when the current status is not AVAILABLE
+     * @throws IllegalStateException when the current status is not AVAILABLE or UNDER_MAINTENANCE
      */
     public void reserve() {
-        if (this.status != EquipmentStatus.AVAILABLE) {
+        if (this.status != EquipmentStatus.AVAILABLE && this.status != EquipmentStatus.UNDER_MAINTENANCE) {
             throw new IllegalStateException("Solo se puede reservar equipo disponible. Estado actual: " + this.status);
         }
         this.status = EquipmentStatus.RESERVED;
