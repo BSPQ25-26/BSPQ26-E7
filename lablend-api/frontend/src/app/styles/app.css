@@ -60,7 +60,14 @@ select {
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--bg); /* changed from transparent */
+  color: var(--text-h);
+}
+
+/* Ensure dropdown options are not white in dark mode */
+select option,
+select optgroup {
+  background-color: var(--bg);
   color: var(--text-h);
 }
 

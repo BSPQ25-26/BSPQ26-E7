@@ -358,104 +358,113 @@ function App() {
         <section className="panel">
           <h2>Create Equipment</h2>
           <form className="stack" onSubmit={submitEquipment}>
-            <label>
-              Name
-              <input
-                value={equipmentName}
-                onChange={(event) => setEquipmentName(event.target.value)}
-                placeholder="Microscope"
-              />
-            </label>
-            <label>
-              Type
-              <input
-                value={equipmentType}
-                onChange={(event) => setEquipmentType(event.target.value)}
-                placeholder="Optics"
-              />
-            </label>
-            <label>
-              Status
-              <select
-                value={equipmentStatus}
-                onChange={(event) => setEquipmentStatus(event.target.value as EquipmentStatus)}
-              >
-                {EQUIPMENT_STATUSES.map((status) => (
-                  <option value={status} key={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" disabled={busyAction === 'create-equipment'}>
-              {busyAction === 'create-equipment' ? 'Creating...' : 'Create equipment'}
-            </button>
+        <label>
+          Name
+          <input
+            value={equipmentName}
+            onChange={(event) => setEquipmentName(event.target.value)}
+            placeholder="Microscope"
+          />
+        </label>
+        <label>
+          Type
+          <input
+            value={equipmentType}
+            onChange={(event) => setEquipmentType(event.target.value)}
+            placeholder="Optics"
+          />
+        </label>
+        <label>
+          Status
+          <select
+            value={equipmentStatus}
+            onChange={(event) => setEquipmentStatus(event.target.value as EquipmentStatus)}
+          >
+            {EQUIPMENT_STATUSES.map((status) => (
+          <option value={status} key={status}>
+            {status}
+          </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" disabled={busyAction === 'create-equipment'}>
+          {busyAction === 'create-equipment' ? 'Creating...' : 'Create equipment'}
+        </button>
           </form>
         </section>
 
         <section className="panel">
           <h2>Create User</h2>
           <form className="stack" onSubmit={submitUser}>
-            <label>
-              Name
-              <input
-                value={userName}
-                onChange={(event) => setUserName(event.target.value)}
-                placeholder="Ada Lovelace"
-              />
-            </label>
-            <label>
-              Email
-              <input
-                value={userEmail}
-                onChange={(event) => setUserEmail(event.target.value)}
-                placeholder="ada@lablend.dev"
-              />
-            </label>
-            <label>
-              Role
-              <select value={userRole} onChange={(event) => setUserRole(event.target.value as UserRole)}>
-                {USER_ROLES.map((role) => (
-                  <option value={role} key={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" disabled={busyAction === 'create-user'}>
-              {busyAction === 'create-user' ? 'Creating...' : 'Create user'}
-            </button>
+        <label>
+          Name
+          <input
+            value={userName}
+            onChange={(event) => setUserName(event.target.value)}
+            placeholder="Ada Lovelace"
+          />
+        </label>
+        <label>
+          Email
+          <input
+            value={userEmail}
+            onChange={(event) => setUserEmail(event.target.value)}
+            placeholder="ada@lablend.dev"
+          />
+        </label>
+        <label>
+          Role
+          <select value={userRole} onChange={(event) => setUserRole(event.target.value as UserRole)}>
+            {USER_ROLES.map((role) => (
+          <option value={role} key={role}>
+            {role}
+          </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" disabled={busyAction === 'create-user'}>
+          {busyAction === 'create-user' ? 'Creating...' : 'Create user'}
+        </button>
           </form>
         </section>
 
         <section className="panel">
           <h2>Create Loan</h2>
           <form className="stack" onSubmit={submitLoan}>
-            <label>
-              User ID
-              <select value={loanUserId} onChange={(event) => setLoanUserId(event.target.value)}>
-                {users.length === 0 ? (
-                  <option value="">No users available</option>
-                ) : (
-                  users.map((user) => (
-                    <option value={String(user.id)} key={user.id}>
-                      {user.id} - {user.name}
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
-            <label>
-              Equipment ID
-              <input
-                value={loanEquipmentId}
-                onChange={(event) => setLoanEquipmentId(event.target.value)}
-                placeholder="3"
-              />
-            </label>
-            <button type="submit" disabled={busyAction === 'create-loan'}>
-              {busyAction === 'create-loan' ? 'Creating...' : 'Create loan'}
-            </button>
+        <label>
+          User ID
+          <select value={loanUserId} onChange={(event) => setLoanUserId(event.target.value)}>
+            {users.length === 0 ? (
+          <option value="">No users available</option>
+            ) : (
+          users.map((user) => (
+            <option value={String(user.id)} key={user.id}>
+              {user.id} - {user.name}
+            </option>
+          ))
+            )}
+          </select>
+        </label>
+        <label>
+          Equipment ID
+          <select
+            value={loanEquipmentId}
+            onChange={(event) => setLoanEquipmentId(event.target.value)}
+          >
+            {equipment.length === 0 ? (
+          <option value="">No equipment available</option>
+            ) : (
+          equipment.map((item) => (
+            <option value={String(item.id)} key={item.id}>
+              {item.id} - {item.name}
+            </option>
+          ))
+            )}
+          </select>
+        </label>
+        <button type="submit" disabled={busyAction === 'create-loan'}>
+          {busyAction === 'create-loan' ? 'Creating...' : 'Create loan'}
+        </button>
           </form>
         </section>
       </section>
