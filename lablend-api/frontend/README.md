@@ -2,6 +2,18 @@
 
 React + TypeScript + Vite frontend for the LabLend project.
 
+## Backend integration
+
+- Frontend calls backend endpoints under `/api`.
+- During local development, Vite proxies `/api/*` to `http://localhost:8080`.
+- You can override the API base URL with `VITE_API_BASE_URL`, for example:
+	- `VITE_API_BASE_URL=http://localhost:8080/api`
+
+Current integrated resources:
+
+- Equipment (`/api/equipment`): list, create, reserve, update status, delete.
+- Loans (`/api/loans`): list, create, update status, delete.
+
 ## Current organization
 
 ```text
