@@ -27,7 +27,6 @@ public class LoanServiceImpl implements LoanService {
      * @param loanRepository      loan data access
      * @param equipmentRepository equipment data access
      */
-    @Autowired
     public LoanServiceImpl(LoanRepository loanRepository, EquipmentRepository equipmentRepository) {
         this.loanRepository = loanRepository;
         this.equipmentRepository = equipmentRepository;
