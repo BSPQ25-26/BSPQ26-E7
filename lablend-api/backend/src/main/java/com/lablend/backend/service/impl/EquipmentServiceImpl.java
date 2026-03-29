@@ -1,5 +1,10 @@
 package com.lablend.backend.service.impl;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.EquipmentStatus;
 import com.lablend.backend.repository.EquipmentRepository;
@@ -7,18 +12,11 @@ import com.lablend.backend.service.EquipmentService;
 
 import jakarta.transaction.Transactional;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Optional;
-
 @Service
 public class EquipmentServiceImpl implements EquipmentService {
 
     private final EquipmentRepository equipmentRepository;
 
-    @Autowired
     public EquipmentServiceImpl(EquipmentRepository equipmentRepository) {
         this.equipmentRepository = equipmentRepository;
     }
@@ -78,6 +76,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Transactional
+    @Override
     public Equipment reserveEquipment(Long id) {
         Equipment equipment = equipmentRepository.findById(id)
         .orElseThrow(() -> new RuntimeException("Equipment not found"));
