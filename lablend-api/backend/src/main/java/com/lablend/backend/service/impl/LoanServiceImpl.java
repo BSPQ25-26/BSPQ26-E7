@@ -1,5 +1,9 @@
 package com.lablend.backend.service.impl;
 
+import java.time.LocalDateTime;
+
+import org.springframework.stereotype.Service;
+
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.EquipmentStatus;
 import com.lablend.backend.entity.Loan;
@@ -7,10 +11,6 @@ import com.lablend.backend.entity.LoanStatus;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
 import com.lablend.backend.service.LoanService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
 
 /**
  * Implementation of {@link LoanService}.

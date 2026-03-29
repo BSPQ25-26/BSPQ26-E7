@@ -1,5 +1,10 @@
 package com.lablend.backend.service.impl;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.EquipmentStatus;
 import com.lablend.backend.repository.EquipmentRepository;
@@ -128,6 +133,7 @@ public class EquipmentServiceImpl implements EquipmentService {
      * @throws IllegalStateException if the reservation transition is invalid.
      */
     @Transactional
+    @Override
     public Equipment reserveEquipment(Long id) {
         Equipment equipment = equipmentRepository.findById(id)
         .orElseThrow(() -> new RuntimeException("Equipment not found"));
