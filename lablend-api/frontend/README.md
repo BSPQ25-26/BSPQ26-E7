@@ -1,33 +1,50 @@
-# Frontend README for LabLend API
+# LabLend Frontend
 
-This is the README file for the frontend application of the LabLend API project. The frontend is currently under development and is intended to provide a user interface for interacting with the backend services.
+React + TypeScript + Vite frontend for the LabLend project.
 
-## Project Overview
+## Backend integration
 
-The frontend will serve as the client-side application that communicates with the LabLend backend API. It will allow users to manage laboratory equipment, view availability, and perform borrowing operations.
+- Frontend calls backend endpoints under `/api`.
+- During local development, Vite proxies `/api/*` to `http://localhost:8080`.
+- You can override the API base URL with `VITE_API_BASE_URL`, for example:
+	- `VITE_API_BASE_URL=http://localhost:8080/api`
 
-## Current Status
+Current integrated resources:
 
-As of now, the frontend implementation is empty. Future development will include:
+- Equipment (`/api/equipment`): list, create, reserve, update status, delete.
+- Loans (`/api/loans`): list, create, update status, delete.
 
-- User authentication and authorization
-- Equipment management interface
-- Borrowing and returning equipment functionality
-- Integration with the backend API
+## Current organization
 
-## Getting Started
+```text
+src/
+├── app/
+│   ├── App.tsx
+│   └── styles/
+│       ├── app.css
+│       └── global.css
+├── features/
+├── services/
+│   └── http/
+├── shared/
+│   ├── assets/
+│   └── ui/
+├── test/
+└── main.tsx
+```
 
-To set up the frontend application, follow these steps:
+## Folder conventions
 
-1. **Clone the Repository**: Clone the LabLend API repository to your local machine.
-2. **Navigate to the Frontend Directory**: Change into the `frontend` directory.
-3. **Install Dependencies**: Run the necessary commands to install frontend dependencies (e.g., using npm or yarn).
-4. **Run the Application**: Start the frontend application to begin development.
+- `app/`: root app composition, providers, routing bootstrap, and global styles.
+- `features/`: domain modules (e.g. `equipment`, `loans`, `users`) with local components, hooks and API calls.
+- `services/http/`: reusable HTTP client and request utilities.
+- `shared/ui/`: generic reusable UI components used by multiple features.
+- `shared/assets/`: shared static assets (icons, images, logos).
+- `test/`: test setup, mocks and shared testing utilities.
 
-## Contribution
+## Scripts
 
-Contributions to the frontend are welcome. Please follow the project's contribution guidelines for submitting changes or enhancements.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for more details.
+- `npm run dev`: start Vite dev server.
+- `npm run build`: type-check and build production bundle.
+- `npm run lint`: run ESLint.
+- `npm run preview`: preview built app.
