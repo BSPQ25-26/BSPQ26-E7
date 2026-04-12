@@ -3,7 +3,6 @@ package com.lablend.backend.entity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -69,5 +68,22 @@ public class EquipmentTest {
 
         equipment.setStatus(EquipmentStatus.RESERVED); 
         assertEquals(EquipmentStatus.RESERVED, equipment.getStatus());
+    }
+
+    @Test
+    public void testCompleteLifecycle() {
+        assertEquals(EquipmentStatus.AVAILABLE, equipment.getStatus());
+
+        equipment.reserve();
+        assertEquals(EquipmentStatus.RESERVED, equipment.getStatus());
+
+        equipment.setStatus(EquipmentStatus.AVAILABLE);
+        assertEquals(EquipmentStatus.AVAILABLE, equipment.getStatus());
+
+        equipment.startMaintenance();
+        assertEquals(EquipmentStatus.UNDER_MAINTENANCE, equipment.getStatus());
+
+        equipment.finishMaintenance();
+        assertEquals(EquipmentStatus.AVAILABLE, equipment.getStatus());
     }
 }

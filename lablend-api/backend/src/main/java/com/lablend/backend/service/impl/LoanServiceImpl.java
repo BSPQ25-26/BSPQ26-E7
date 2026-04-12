@@ -39,6 +39,12 @@ public class LoanServiceImpl implements LoanService {
     /** {@inheritDoc} */
     @Override
     public Loan createLoan(Loan loan) {
+        long activeLoansCount = loanRepository.countByUserIdAndStatus(loan.getUserId(), LoanStatus.ACTIVE);
+        
+        if (activeLoansCount >= 3) {
+            throw new RuntimeException("User has reached the maximum limit of 3 active loans");
+        }
+
         Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
                 .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
 
@@ -49,7 +55,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setLoanDate(LocalDateTime.now());
         loan.setStatus(LoanStatus.ACTIVE);
 
-        equipment.reserve();
+        equipment.setStatus(EquipmentStatus.RESERVED);
         equipmentRepository.save(equipment);
 
         return loanRepository.save(loan);

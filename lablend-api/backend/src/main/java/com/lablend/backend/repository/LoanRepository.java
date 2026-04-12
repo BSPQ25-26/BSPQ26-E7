@@ -11,9 +11,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import com.lablend.backend.dto.OverdueLoanDTO;
 
-/**
- * Spring Data JPA repository for {@link Loan} entities.
- */
+import com.lablend.backend.entity.Loan;
+import com.lablend.backend.entity.LoanStatus;
+
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
 
@@ -30,4 +30,5 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
                "WHERE l.due_date < :now AND l.status = 'ACTIVE'", 
        nativeQuery = true)
     List<Object[]> findOverdueLoansRaw(@Param("now") java.time.LocalDateTime now);
+    long countByUserIdAndStatus(Long userId, LoanStatus status);
 }
