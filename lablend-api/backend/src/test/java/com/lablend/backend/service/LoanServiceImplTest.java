@@ -7,12 +7,16 @@ import com.lablend.backend.entity.LoanStatus;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
 import com.lablend.backend.service.impl.LoanServiceImpl;
+import com.lablend.backend.dto.OverdueLoanDTO;
 import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,14 +27,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
-
-import com.lablend.backend.entity.Equipment;
-import com.lablend.backend.entity.EquipmentStatus;
-import com.lablend.backend.entity.Loan;
-import com.lablend.backend.entity.LoanStatus;
-import com.lablend.backend.repository.EquipmentRepository;
-import com.lablend.backend.repository.LoanRepository;
-import com.lablend.backend.service.impl.LoanServiceImpl;
 
 class LoanServiceImplTest {
 
@@ -83,12 +79,12 @@ class LoanServiceImplTest {
         inputLoan.setEquipmentId(1L);
         inputLoan.setUserId(2L);
 
+        assertThrows(RuntimeException.class, () -> loanService.createLoan(inputLoan));
         verify(loanRepository, never()).save(any(Loan.class));
     }
 
-  @Test
+    @Test
     void returnLoan_Success() {
-        // GIVEN
         Long loanId = 1L;
         Long equipmentId = 10L;
 
@@ -116,7 +112,6 @@ class LoanServiceImplTest {
     @Test
     void returnLoan_NotFound() {
         when(loanRepository.findById(99L)).thenReturn(Optional.empty());
-
         assertThrows(RuntimeException.class, () -> loanService.returnLoan(99L));
     }
 
@@ -130,18 +125,20 @@ class LoanServiceImplTest {
             java.sql.Timestamp.valueOf(java.time.LocalDateTime.now().minusDays(1))
         };
         
-        java.util.List<Object[]> mockResponse = new java.util.ArrayList<>();
+        List<Object[]> mockResponse = new ArrayList<>();
         mockResponse.add(row);
         
         when(loanRepository.findOverdueLoansRaw(any())).thenReturn(mockResponse);
 
-        java.util.List<com.lablend.backend.dto.OverdueLoanDTO> result = loanService.getOverdueLoans();
+        List<OverdueLoanDTO> result = loanService.getOverdueLoans();
 
         assertFalse(result.isEmpty());
         assertEquals("Test User", result.get(0).getUserName());
         assertEquals("Microscope", result.get(0).getEquipmentName());
         
         verify(loanRepository).findOverdueLoansRaw(any());
+    }
+
     @SuppressWarnings("null")
     @Test
     void createLoan_WhenUserHasThreeActiveLoans_ShouldThrowException() {
