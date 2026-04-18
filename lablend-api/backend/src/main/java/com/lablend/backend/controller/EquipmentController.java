@@ -101,4 +101,21 @@ public class EquipmentController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    /**
+     * Retrieves a paginated list of all equipment records.
+     * Accepts optional query parameters to control pagination behavior.
+     * If no parameters are provided, defaults to the first page with 10 items per page.
+     * @param page The zero-based page number to retrieve (default: 0).
+     * @param size The number of items per page (default: 10).
+     * @return A Page object containing the equipment entities for the requested page,
+     *         along with metadata such as total pages and total elements.
+     */
+    @GetMapping
+    public Page<Equipment> getAll(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size
+    ) {
+        return equipmentService.getAllEquipmentPaged(PageRequest.of(page, size));
+    }
 }

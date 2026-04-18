@@ -11,4 +11,5 @@ public interface EquipmentService {
     Equipment updateEquipment(Long id, Equipment equipment);
     void deleteEquipment(Long id);
     Equipment reserveEquipment(Long id);
+    Page<Equipment> getAllEquipmentPaged(Pageable pageable);
 }
