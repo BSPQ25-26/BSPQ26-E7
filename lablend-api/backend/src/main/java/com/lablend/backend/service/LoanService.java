@@ -47,4 +47,15 @@ public interface LoanService {
      * @param id loan identifier
      */
     void deleteLoan(Long id);
+
+    /**
+     * Executes the return process for a piece of equipment.
+     * Sets the loan status to COMPLETED and reverts the equipment status to AVAILABLE.
+     * @param id the identifier of the loan to be returned
+     * @return the updated loan entity
+     * @throws RuntimeException if the loan or associated equipment is not found
+     */
+    Loan returnLoan(Long id);
+
+    java.util.List<com.lablend.backend.dto.OverdueLoanDTO> getOverdueLoans();
 }
