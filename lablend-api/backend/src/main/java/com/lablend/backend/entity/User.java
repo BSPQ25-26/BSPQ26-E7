@@ -6,6 +6,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 /**
  * Entity representing a user in the system.
@@ -13,6 +14,7 @@ import jakarta.persistence.Id;
  */
 
 @Entity
+@Table(name = "users")
 public class User {
 
     /** Unique ID of a user */
