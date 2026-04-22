@@ -42,7 +42,7 @@ public class LoanServiceImpl implements LoanService {
         long activeLoansCount = loanRepository.countByUserIdAndStatus(loan.getUserId(), LoanStatus.ACTIVE);
         
         if (activeLoansCount >= 3) {
-            throw new RuntimeException("User has reached the maximum limit of 3 active loans");
+            throw new IllegalStateException("User has reached the maximum limit of 3 active loans");
         }
 
         Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
