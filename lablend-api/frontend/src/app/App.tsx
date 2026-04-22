@@ -42,8 +42,8 @@ function App() {
   const [equipmentName, setEquipmentName] = useState('')
   const [equipmentType, setEquipmentType] = useState('')
   const [equipmentStatus, setEquipmentStatus] = useState<EquipmentStatus>('AVAILABLE')
-
-  const [loanUserId, setLoanUserId] = useState('1')
+  
+  const [loanUserId, setLoanUserId] = useState('')
   const [loanEquipmentId, setLoanEquipmentId] = useState('')
 
   const [loanStatusDrafts, setLoanStatusDrafts] = useState<Record<number, LoanStatus>>({})
@@ -109,6 +109,26 @@ function App() {
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (users.length === 0) {
+      setLoanUserId('')
+      return
+    }
+    if (!loanUserId || !users.some((u) => String(u.id) === loanUserId)) {
+      setLoanUserId(String(users[0].id))
+    }
+  }, [users, loanUserId])
+
+  useEffect(() => {
+    if (equipment.length === 0) {
+      setLoanEquipmentId('')
+      return
+    }
+    if (!loanEquipmentId || !equipment.some((e) => String(e.id) === loanEquipmentId)) {
+      setLoanEquipmentId(String(equipment[0].id))
+    }
+  }, [equipment, loanEquipmentId])
 
   const submitEquipment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
