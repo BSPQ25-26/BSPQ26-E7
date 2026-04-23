@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
 import java.util.List;
 
 /**
@@ -18,15 +21,7 @@ public class EquipmentController {
     @Autowired
     private EquipmentService equipmentService;
 
-    /**
-     * Retrieves all equipment records.
-     *
-     * @return list of all equipment
-     */
-    @GetMapping
-    public List<Equipment> getAllEquipment() {
-        return equipmentService.getAllEquipment();
-    }
+    
 
     /**
      * Retrieves one equipment record by identifier.
@@ -100,5 +95,22 @@ public class EquipmentController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * Retrieves a paginated list of all equipment records.
+     * Accepts optional query parameters to control pagination behavior.
+     * If no parameters are provided, defaults to the first page with 10 items per page.
+     * @param page The zero-based page number to retrieve (default: 0).
+     * @param size The number of items per page (default: 10).
+     * @return A Page object containing the equipment entities for the requested page,
+     *         along with metadata such as total pages and total elements.
+     */
+    @GetMapping
+    public Page<Equipment> getAll(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size
+    ) {
+        return equipmentService.getAllEquipmentPaged(PageRequest.of(page, size));
     }
 }

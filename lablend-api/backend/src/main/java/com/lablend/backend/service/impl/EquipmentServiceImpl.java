@@ -15,6 +15,9 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -141,5 +144,19 @@ public class EquipmentServiceImpl implements EquipmentService {
         equipment.reserve(); 
     
         return equipmentRepository.save(equipment);
+    }
+
+    /**
+     * Retrieves a paginated list of equipment records from the database.
+     * Delegates directly to the repository's built-in pagination support,
+     * returning only the subset of equipment corresponding to the requested page.
+     * @param pageable The pagination parameters including page number, page size, and optional sorting.
+     * @return A Page object containing the equipment entities for the requested page,
+     * along with metadata such as total pages and total elements.
+     */
+
+    @Override
+    public Page<Equipment> getAllEquipmentPaged(Pageable pageable) {
+        return equipmentRepository.findAll(pageable);
     }
 }
