@@ -52,6 +52,8 @@ public class LoanController {
         try {
             Loan createdLoan = loanService.createLoan(loan);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdLoan);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
