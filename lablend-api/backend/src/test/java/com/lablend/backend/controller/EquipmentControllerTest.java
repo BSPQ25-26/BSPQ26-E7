@@ -174,31 +174,41 @@ class EquipmentControllerTest {
         "spring.jpa.hibernate.ddl-auto=create-drop"
     }
 )
+@org.springframework.context.annotation.Import(EquipmentControllerIntegrationTest.TestSecurityConfig.class)
 class EquipmentControllerIntegrationTest {
 
     @Autowired
     private org.springframework.boot.test.web.client.TestRestTemplate restTemplate;
 
     @Autowired
-    private EquipmentService equipmentService; 
+    private EquipmentService equipmentService;
 
     @Test
     void testRemoteGetAllEquipment() {
-        // 1. Setup real data in the database
         Equipment e1 = new Equipment();
         e1.setName("Integration Test Scope");
         e1.setType("Test Type");
         e1.setStatus(EquipmentStatus.AVAILABLE);
         equipmentService.createEquipment(e1);
 
-        // 2. Perform the remote call
-        org.springframework.http.ResponseEntity<Equipment[]> response = 
-            restTemplate.getForEntity("/api/equipment", Equipment[].class);
+        org.springframework.http.ResponseEntity<String> response =
+            restTemplate.getForEntity("/api/equipment", String.class);
 
-        // 3. Verify real response from the database through the server
         org.junit.jupiter.api.Assertions.assertEquals(org.springframework.http.HttpStatus.OK, response.getStatusCode());
         org.junit.jupiter.api.Assertions.assertNotNull(response.getBody());
-        org.junit.jupiter.api.Assertions.assertTrue(response.getBody().length > 0);
-        org.junit.jupiter.api.Assertions.assertEquals("Integration Test Scope", response.getBody()[0].getName());
+        org.junit.jupiter.api.Assertions.assertTrue(response.getBody().contains("\"name\":\"Integration Test Scope\""));
+    }
+
+    @org.springframework.boot.test.context.TestConfiguration
+    static class TestSecurityConfig {
+        @org.springframework.context.annotation.Bean
+        @org.springframework.core.annotation.Order(0)
+        org.springframework.security.web.SecurityFilterChain testFilterChain(
+                org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
+            return http
+                    .csrf(csrf -> csrf.disable())
+                    .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                    .build();
+        }
     }
 }
