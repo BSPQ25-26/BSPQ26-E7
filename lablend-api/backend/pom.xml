@@ -64,8 +64,8 @@
 
         <dependency>
             <groupId>com.github.noconnor</groupId>
-            <artifactId>junitperf</artifactId>
-            <version>1.35.0</version>
+            <artifactId>junitperf-junit5</artifactId>
+            <version>1.37.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -77,8 +77,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-
-            <!-- Copy JUnitPerf report to Maven site -->
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
@@ -92,7 +90,6 @@
                         <configuration>
                             <outputDirectory>${project.reporting.outputDirectory}/junitperf</outputDirectory>
                             <resources>
-                                <!-- JUnitPerf defaults to this directory -->
                                 <resource>
                                     <directory>${project.basedir}/build/reports</directory>
                                 </resource>
