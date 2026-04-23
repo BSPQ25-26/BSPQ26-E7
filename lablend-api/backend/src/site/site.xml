@@ -9,7 +9,7 @@
         </menu>
 
         <menu name="Custom Reports">
-            <item name="JUnitPerf Performance Report" href="site/perf-reports"/>
+            <item name="JUnitPerf Performance Report" href="/perf-reports"/>
         </menu>
 
         <menu ref="reports"/>

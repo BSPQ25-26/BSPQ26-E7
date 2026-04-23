@@ -29,7 +29,7 @@ public class EquipmentPerformanceTest {
 
     @JUnitPerfTestActiveConfig
     public static final JUnitPerfReportingConfig PERF_CONFIG = JUnitPerfReportingConfig.builder()
-            .reportGenerator(new HtmlReportGenerator("target/perf-reports/performance_report.html"))
+            .reportGenerator(new HtmlReportGenerator("target/site/perf-reports/performance_report.html"))
             .build();
 
 
