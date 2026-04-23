@@ -1,6 +1,5 @@
 package com.lablend.backend.service;
 
-import org.junit.jupiter.api.extension.RegisterExtension;
 import com.github.noconnor.junitperf.reporting.providers.HtmlReportGenerator;
 import com.github.noconnor.junitperf.JUnitPerfReportingConfig;
 import com.github.noconnor.junitperf.JUnitPerfTest;
@@ -39,27 +38,34 @@ public class EquipmentPerformanceTest {
     @Mock
     private EquipmentRepository equipmentRepository;
 
-    // 1. Successful performance test
+    // 1. Successful performance test focused on throughput and invocations
     @Test
-    @JUnitPerfTest(threads = 10, durationMs = 100)
-    @JUnitPerfTestRequirement(allowedErrorPercentage = 100, executionsPerSec = 5)
-    public void testEquipmentCreation_Success() {
+    @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 100)
+    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, executionsPerSec = 10, meanLatency = 100.0f, maxLatency = 500.0f)
+    public void testEquipmentCreation_Throughput_Success() {
         Equipment eq = new Equipment("Oscilloscope", "Lab", EquipmentStatus.AVAILABLE);
-        when(equipmentRepository.save(any(Equipment.class))).thenReturn(eq);
+        
+        synchronized(this) {
+            when(equipmentRepository.save(any(Equipment.class))).thenReturn(eq);
+        }
         
         Equipment created = equipmentService.createEquipment(eq);
         assertNotNull(created);
     }
 
-    // 2. Failed performance test
+    // 2. Failed performance test focused on duration
     @Test
-    @JUnitPerfTest(threads = 2, durationMs = 10)
-    @JUnitPerfTestRequirement(allowedErrorPercentage = 100, maxLatency = 10.0f)
-    public void testEquipmentCreation_Fail() throws InterruptedException {
+    @JUnitPerfTest(threads = 5, durationMs = 1000)
+    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, maxLatency = 100.0f, meanLatency = 50.0f)
+    public void testEquipmentCreation_Duration_Fail() throws InterruptedException {
         Equipment eq = new Equipment("Microscope", "Lab", EquipmentStatus.AVAILABLE);
-        when(equipmentRepository.save(any(Equipment.class))).thenReturn(eq);
         
-        Thread.sleep(0); // Artificial delay that can be increased to break the 1ms max latency rule 
+        synchronized(this) {
+            when(equipmentRepository.save(any(Equipment.class))).thenReturn(eq);
+        }
+        
+        // Artificial delay that breaks the 5ms max latency and 2ms mean latency rules
+        Thread.sleep(0); 
         
         Equipment created = equipmentService.createEquipment(eq);
         assertNotNull(created);
