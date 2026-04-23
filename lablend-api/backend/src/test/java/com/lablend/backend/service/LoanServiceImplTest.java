@@ -152,7 +152,7 @@ class LoanServiceImplTest {
         inputLoan.setEquipmentId(1L);
         inputLoan.setUserId(2L);
 
-        Exception exception = assertThrows(RuntimeException.class, () -> {
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
             loanService.createLoan(inputLoan);
         });
 

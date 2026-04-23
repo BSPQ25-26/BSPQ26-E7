@@ -24,7 +24,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+
 @WebMvcTest(EquipmentController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class EquipmentControllerTest {
 
     @Autowired
@@ -35,19 +41,23 @@ class EquipmentControllerTest {
 
     @Test
     void testGetAllEquipment() throws Exception {
+
         Equipment equipment = new Equipment();
         equipment.setId(1L);
         equipment.setName("Microscope");
         equipment.setType("Optical");
         equipment.setStatus(EquipmentStatus.AVAILABLE);
 
-        when(equipmentService.getAllEquipment()).thenReturn(List.of(equipment));
+        Page<Equipment> page = new PageImpl<>(List.of(equipment));
+
+        when(equipmentService.getAllEquipmentPaged(any(Pageable.class)))
+                .thenReturn(page);
 
         mockMvc.perform(get("/api/equipment"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Microscope"))
-                .andExpect(jsonPath("$[0].status").value("AVAILABLE"));
+                .andExpect(jsonPath("$.content[0].name").value("Microscope"))
+                .andExpect(jsonPath("$.content[0].status").value("AVAILABLE"));
     }
 
     @Test
