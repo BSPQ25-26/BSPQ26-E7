@@ -11,6 +11,8 @@ import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.service.EquipmentService;
 
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,8 @@ import java.util.Optional;
  */
 @Service
 public class EquipmentServiceImpl implements EquipmentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(EquipmentServiceImpl.class);
 
     private final EquipmentRepository equipmentRepository;
 
@@ -45,6 +49,7 @@ public class EquipmentServiceImpl implements EquipmentService {
      */
     @Override
     public Equipment createEquipment(Equipment equipment) {
+        logger.info("Creating new equipment: {}", equipment.getName());
         return equipmentRepository.save(equipment);
     }
 
@@ -55,6 +60,7 @@ public class EquipmentServiceImpl implements EquipmentService {
      */
     @Override
     public Optional<Equipment> getEquipmentById(Long id) {
+        logger.debug("Fetching equipment with ID: {}", id);
         return equipmentRepository.findById(id);
     }
 
@@ -64,6 +70,7 @@ public class EquipmentServiceImpl implements EquipmentService {
      */
     @Override
     public List<Equipment> getAllEquipment() {
+        logger.debug("Fetching all equipment");
         return equipmentRepository.findAll();
     }
 
@@ -78,6 +85,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     @Override
     @Transactional
     public Equipment updateEquipment(Long id, Equipment equipment) {
+        logger.info("Attempting to update equipment with ID: {}", id);
         return equipmentRepository.findById(id)
                 .map(existingEquipment -> {
                     existingEquipment.setName(equipment.getName());
@@ -87,9 +95,13 @@ public class EquipmentServiceImpl implements EquipmentService {
                     applyStateTransition(existingEquipment, equipment.getStatus());
                 }
                 
+                logger.info("Successfully updated equipment with ID: {}", id);
                 return equipmentRepository.save(existingEquipment);
             })
-            .orElse(null);
+            .orElseGet(() -> {
+                logger.warn("Equipment with ID: {} not found for update", id);
+                return null;
+            });
     }
 
     /**
@@ -100,6 +112,7 @@ public class EquipmentServiceImpl implements EquipmentService {
      * @param newStatus The target status to transition to.
      */
     private void applyStateTransition(Equipment equipment, EquipmentStatus newStatus) {
+        logger.debug("Applying state transition to {} for equipment ID: {}", newStatus, equipment.getId());
         switch (newStatus) {
             case RESERVED -> equipment.reserve();
             case UNDER_MAINTENANCE -> equipment.startMaintenance();
@@ -120,6 +133,7 @@ public class EquipmentServiceImpl implements EquipmentService {
      */
     @Override
     public void deleteEquipment(Long id) {
+        logger.info("Deleting equipment with ID: {}", id);
         equipmentRepository.deleteById(id);
     }
 
@@ -135,10 +149,15 @@ public class EquipmentServiceImpl implements EquipmentService {
     @Transactional
     @Override
     public Equipment reserveEquipment(Long id) {
+        logger.info("Attempting to reserve equipment with ID: {}", id);
         Equipment equipment = equipmentRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Equipment not found"));
+        .orElseThrow(() -> {
+            logger.error("Failed to reserve. Equipment not found with ID: {}", id);
+            return new RuntimeException("Equipment not found");
+        });
     
         equipment.reserve(); 
+        logger.info("Successfully reserved equipment with ID: {}", id);
     
         return equipmentRepository.save(equipment);
     }

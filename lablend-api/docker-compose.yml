@@ -10,6 +10,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/lablend
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
+    volumes:
+      - ./logs:/app/logs
     restart: on-failure
     depends_on:
       db:
