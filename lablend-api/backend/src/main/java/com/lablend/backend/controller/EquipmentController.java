@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
 import java.util.List;
 
 /**
@@ -18,15 +21,7 @@ public class EquipmentController {
     @Autowired
     private EquipmentService equipmentService;
 
-    /**
-     * Retrieves all equipment records.
-     *
-     * @return list of all equipment
-     */
-    @GetMapping
-    public List<Equipment> getAllEquipment() {
-        return equipmentService.getAllEquipment();
-    }
+    
 
     /**
      * Retrieves one equipment record by identifier.

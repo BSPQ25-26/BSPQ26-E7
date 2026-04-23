@@ -4,6 +4,9 @@ import com.lablend.backend.entity.Equipment;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 public interface EquipmentService {
     Equipment createEquipment(Equipment equipment);
     Optional<Equipment> getEquipmentById(Long id);
