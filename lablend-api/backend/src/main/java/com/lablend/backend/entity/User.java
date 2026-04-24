@@ -28,6 +28,9 @@ public class User {
     /** Email of a user */
     private String email;
 
+    /** Password of a user */
+    private String password;
+
     /** Role of a user */
     @Enumerated(EnumType.STRING)
     private UserRole role;
@@ -39,11 +42,13 @@ public class User {
     /** Constructor for creating a user with specified attributes 
      * @param name  the name of the user
      * @param email the email of the user
+     * @param password the password of the user
      * @param role  the role of the user (e.g., ADMIN, USER)
     */
-    public User(String name, String email, UserRole role) {
+    public User(String name, String email, String password, UserRole role) {
         this.name = name;
         this.email = email;
+        this.password = password;
         this.role = role;
     }
 
@@ -75,6 +80,16 @@ public class User {
     /** Setter for the email of a user */
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    /** @return the password of a user */
+    public String getPassword() {
+        return password;
+    }
+
+    /** Setter for the password of a user */
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     /** @return the role of a user */

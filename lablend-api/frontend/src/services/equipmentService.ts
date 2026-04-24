@@ -7,9 +7,13 @@ interface SaveEquipmentPayload {
   status: EquipmentStatus
 }
 
+interface Page<T> {
+  content: T[]
+}
+
 export const equipmentService = {
   getAll(): Promise<Equipment[]> {
-    return httpClient.get<Equipment[]>('/equipment')
+    return httpClient.get<Page<Equipment>>('/equipment').then(page => page.content || (page as any as Equipment[]))
   },
 
   create(payload: SaveEquipmentPayload): Promise<Equipment> {

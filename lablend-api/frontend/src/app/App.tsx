@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
+import { authService } from '../services/authService'
 import { equipmentService } from '../services/equipmentService'
 import { loanService } from '../services/loanService'
 import { userService } from '../services/userService'
@@ -31,6 +32,11 @@ const formatDateTime = (value: string): string => {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(authService.getToken()))
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [loans, setLoans] = useState<Loan[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -51,6 +57,7 @@ function App() {
 
   const [userName, setUserName] = useState('')
   const [userEmail, setUserEmail] = useState('')
+  const [userPassword, setUserPassword] = useState('')
   const [userRole, setUserRole] = useState<UserRole>('USER')
 
   const equipmentById = useMemo(() => {
@@ -68,6 +75,11 @@ function App() {
   }
 
   const loadData = useCallback(async () => {
+    if (!isAuthenticated) {
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     try {
       const [userResponse, equipmentResponse, loanResponse] = await Promise.all([
@@ -104,11 +116,13 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isAuthenticated])
 
   useEffect(() => {
-    void loadData()
-  }, [loadData])
+    if (isAuthenticated) {
+      void loadData()
+    }
+  }, [isAuthenticated, loadData])
 
   useEffect(() => {
     if (users.length === 0) {
@@ -211,11 +225,13 @@ function App() {
       await userService.create({
         name: userName.trim(),
         email: userEmail.trim(),
+        password: userPassword.trim(),
         role: userRole,
       })
 
       setUserName('')
       setUserEmail('')
+      setUserPassword('')
       setUserRole('USER')
       setSuccess('User created successfully.')
       await loadData()
@@ -349,6 +365,95 @@ function App() {
     }
   }
 
+  const submitLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setError('Username and password are required.')
+      return
+    }
+
+    setIsLoggingIn(true)
+    try {
+      await authService.login({
+        username: loginEmail.trim(),
+        password: loginPassword,
+      })
+
+      setLoginEmail('')
+      setLoginPassword('')
+      setIsAuthenticated(true)
+      setSuccess('Login successful.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to log in.'
+      setError(message)
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }
+
+  const handleLogout = () => {
+    authService.logout()
+    setIsAuthenticated(false)
+    setEquipment([])
+    setLoans([])
+    setUsers([])
+    setLoanStatusDrafts({})
+    setUserDrafts({})
+    setLoanUserId('')
+    setLoanEquipmentId('')
+    setBusyAction(null)
+    setLoading(false)
+    setSuccess('Logged out successfully.')
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="app-shell">
+        <header className="app-header">
+          <h1>LabLend Login</h1>
+        </header>
+
+        {errorMessage && (
+          <p className="status-banner error" role="alert">
+            {errorMessage}
+          </p>
+        )}
+        {successMessage && <p className="status-banner success">{successMessage}</p>}
+
+        <section className="panel login-panel">
+          <form className="stack" onSubmit={submitLogin}>
+            <label>
+              Username
+              <input
+                value={loginEmail}
+                type="text"
+                autoComplete="username"
+                onChange={(event) => setLoginEmail(event.target.value)}
+                placeholder="admin"
+              />
+            </label>
+
+            <label>
+              Password
+              <input
+                value={loginPassword}
+                type="password"
+                autoComplete="current-password"
+                onChange={(event) => setLoginPassword(event.target.value)}
+                placeholder="••••••••"
+              />
+            </label>
+
+            <button type="submit" disabled={isLoggingIn}>
+              {isLoggingIn ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -364,6 +469,14 @@ function App() {
           }}
         >
           Refresh
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={busyAction !== null}
+          onClick={handleLogout}
+        >
+          Logout
         </button>
       </header>
 
@@ -430,6 +543,15 @@ function App() {
             value={userEmail}
             onChange={(event) => setUserEmail(event.target.value)}
             placeholder="ada@lablend.dev"
+          />
+        </label>
+        <label>
+          Password
+          <input
+            type="password"
+            value={userPassword}
+            onChange={(event) => setUserPassword(event.target.value)}
+            placeholder="supersecret"
           />
         </label>
         <label>

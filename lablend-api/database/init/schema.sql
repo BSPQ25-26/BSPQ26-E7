@@ -9,8 +9,11 @@ CREATE TABLE IF NOT EXISTS users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL
 );
+
+INSERT IGNORE INTO users (name, email, password, role) VALUES ('admin', 'admin@lablend.com', '$2a$12$p45dYtUAnnSUOaKVn.YJKOODJlW6QRC82Aa2SlGNWY/q1JkCZckwu', 'ADMIN');
 
 CREATE TABLE IF NOT EXISTS loans (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

@@ -4,6 +4,7 @@ import com.lablend.backend.entity.User;
 import com.lablend.backend.repository.UserRepository;
 import com.lablend.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,14 +18,16 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
      /**
      * Constructor-based dependency injection for the user repository.
      * @param userRepository The persistence repository for user data.
      */
     @Autowired
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -34,6 +37,9 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public User createUser(User user) {
+        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         return userRepository.save(user);
     }
 
@@ -56,6 +62,10 @@ public class UserServiceImpl implements UserService {
         user.setName(userDetails.getName());
         user.setEmail(userDetails.getEmail());
         user.setRole(userDetails.getRole());
+        
+        if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
+        }
 
         return userRepository.save(user);
     }

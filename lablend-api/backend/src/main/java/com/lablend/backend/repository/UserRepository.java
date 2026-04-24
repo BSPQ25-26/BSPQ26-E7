@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.lablend.backend.entity.User;
+import java.util.Optional;
 
 /**
  * Repository interface for managing {@link User} entities.
@@ -12,4 +13,5 @@ import com.lablend.backend.entity.User;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByName(String name);
 }
