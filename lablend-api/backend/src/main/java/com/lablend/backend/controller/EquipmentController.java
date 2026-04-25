@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import java.util.List;
 
 /**
@@ -43,6 +45,7 @@ public class EquipmentController {
      * @return created equipment
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public Equipment createEquipment(@RequestBody Equipment equipment) {
         return equipmentService.createEquipment(equipment);
     }
@@ -55,6 +58,7 @@ public class EquipmentController {
      * @return 200 with updated equipment when found, 404 otherwise
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Equipment> updateEquipment(@PathVariable Long id, @RequestBody Equipment equipment) {
         Equipment updatedEquipment = equipmentService.updateEquipment(id, equipment);
         if (updatedEquipment != null) {
@@ -70,6 +74,7 @@ public class EquipmentController {
      * @return 204 when deleted, 404 when the equipment does not exist
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteEquipment(@PathVariable Long id) {
         if (equipmentService.getEquipmentById(id).isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -86,6 +91,7 @@ public class EquipmentController {
      *         or 404 when equipment is not found
      */
     @PutMapping("/{id}/reserve")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> reserveEquipment(@PathVariable Long id) {
         try {
             Equipment reserved = equipmentService.reserveEquipment(id);
