@@ -4,11 +4,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8080:8080" # app port
+      #- "9010:9010" # JMX port for profiling with VisualVM
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/lablend
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
+    volumes:
+      - ./logs:/app/logs
     restart: on-failure
     depends_on:
       db:

@@ -1,3 +1,5 @@
+import { authToken } from '../authToken'
+
 const DEFAULT_BASE_URL = '/api'
 
 export class HttpError extends Error {
@@ -42,7 +44,15 @@ const parseErrorMessage = async (response: Response): Promise<string> => {
 
 export const httpClient = {
   async get<T>(path: string): Promise<T> {
-    const response = await fetch(makeUrl(path))
+    const token = authToken.get()
+    const headers: HeadersInit = {}
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    const response = await fetch(makeUrl(path), {
+      headers,
+    })
     if (!response.ok) {
       throw new HttpError(await parseErrorMessage(response), response.status)
     }
@@ -50,11 +60,18 @@ export const httpClient = {
   },
 
   async post<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+    const token = authToken.get()
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
     const response = await fetch(makeUrl(path), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     })
 
@@ -66,11 +83,18 @@ export const httpClient = {
   },
 
   async put<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+    const token = authToken.get()
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
     const response = await fetch(makeUrl(path), {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     })
 
@@ -82,8 +106,15 @@ export const httpClient = {
   },
 
   async delete(path: string): Promise<void> {
+    const token = authToken.get()
+    const headers: HeadersInit = {}
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
     const response = await fetch(makeUrl(path), {
       method: 'DELETE',
+      headers,
     })
 
     if (!response.ok) {

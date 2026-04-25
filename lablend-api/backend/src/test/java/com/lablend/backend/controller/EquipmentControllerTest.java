@@ -8,17 +8,18 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.MockBean; 
+import com.lablend.backend.auth.filter.JwtAuthenticationFilter;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
 import java.util.Collections;
 import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -36,6 +37,9 @@ class EquipmentControllerTest {
 
     @MockBean
     private EquipmentService equipmentService;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
     void testGetAllEquipment() throws Exception {
@@ -59,6 +63,80 @@ class EquipmentControllerTest {
     }
 
     @Test
+    void testGetEquipmentByIdSuccess() throws Exception {
+        Equipment equipment = new Equipment();
+        equipment.setId(1L);
+        equipment.setName("Microscope");
+        when(equipmentService.getEquipmentById(1L)).thenReturn(java.util.Optional.of(equipment));
+
+        mockMvc.perform(get("/api/equipment/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Microscope"));
+    }
+
+    @Test
+    void testGetEquipmentByIdNotFound() throws Exception {
+        when(equipmentService.getEquipmentById(1L)).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/equipment/1"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testCreateEquipment() throws Exception {
+        Equipment equipment = new Equipment();
+        equipment.setName("Oscilloscope");
+        
+        when(equipmentService.createEquipment(any(Equipment.class))).thenReturn(equipment);
+
+        mockMvc.perform(post("/api/equipment")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"Oscilloscope\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Oscilloscope"));
+    }
+
+    @Test
+    void testUpdateEquipmentSuccess() throws Exception {
+        Equipment equipment = new Equipment();
+        equipment.setName("Updated Microscope");
+
+        when(equipmentService.updateEquipment(any(Long.class), any(Equipment.class))).thenReturn(equipment);
+
+        mockMvc.perform(put("/api/equipment/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"Updated Microscope\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Updated Microscope"));
+    }
+
+    @Test
+    void testUpdateEquipmentNotFound() throws Exception {
+        when(equipmentService.updateEquipment(any(Long.class), any(Equipment.class))).thenReturn(null);
+
+        mockMvc.perform(put("/api/equipment/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"Updated Microscope\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testDeleteEquipmentSuccess() throws Exception {
+        when(equipmentService.getEquipmentById(1L)).thenReturn(java.util.Optional.of(new Equipment()));
+
+        mockMvc.perform(delete("/api/equipment/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testDeleteEquipmentNotFound() throws Exception {
+        when(equipmentService.getEquipmentById(1L)).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(delete("/api/equipment/1"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void testReserveEquipmentSuccess() throws Exception {
         Equipment reservedEquipment = new Equipment("Microscope", "Optical", EquipmentStatus.RESERVED);
         reservedEquipment.setId(1L);
@@ -78,5 +156,61 @@ class EquipmentControllerTest {
         mockMvc.perform(put("/api/equipment/1/reserve"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Solo se puede reservar equipo disponible."));
+    }
+
+    @Test
+    void testReserveEquipmentFail_NotFound() throws Exception {
+        when(equipmentService.reserveEquipment(1L)).thenThrow(new RuntimeException("Not found"));
+
+        mockMvc.perform(put("/api/equipment/1/reserve"))
+                .andExpect(status().isNotFound());
+    }
+}
+
+@org.springframework.boot.test.context.SpringBootTest(
+    webEnvironment = org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = {
+        "spring.datasource.url=jdbc:h2:mem:testdb",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+    }
+)
+@org.springframework.context.annotation.Import(EquipmentControllerIntegrationTest.TestSecurityConfig.class)
+class EquipmentControllerIntegrationTest {
+
+    @Autowired
+    private org.springframework.boot.test.web.client.TestRestTemplate restTemplate;
+
+    @Autowired
+    private EquipmentService equipmentService;
+
+    @Test
+    void testRemoteGetAllEquipment() {
+        Equipment e1 = new Equipment();
+        e1.setName("Integration Test Scope");
+        e1.setType("Test Type");
+        e1.setStatus(EquipmentStatus.AVAILABLE);
+        equipmentService.createEquipment(e1);
+
+        org.springframework.http.ResponseEntity<String> response =
+            restTemplate.getForEntity("/api/equipment", String.class);
+
+        org.junit.jupiter.api.Assertions.assertEquals(org.springframework.http.HttpStatus.OK, response.getStatusCode());
+        org.junit.jupiter.api.Assertions.assertNotNull(response.getBody());
+        org.junit.jupiter.api.Assertions.assertTrue(response.getBody().contains("\"name\":\"Integration Test Scope\""));
+    }
+
+    @org.springframework.boot.test.context.TestConfiguration
+    static class TestSecurityConfig {
+        @org.springframework.context.annotation.Bean
+        @org.springframework.core.annotation.Order(0)
+        org.springframework.security.web.SecurityFilterChain testFilterChain(
+                org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
+            return http
+                    .csrf(csrf -> csrf.disable())
+                    .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                    .build();
+        }
     }
 }

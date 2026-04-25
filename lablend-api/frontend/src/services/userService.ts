@@ -4,6 +4,7 @@ import type { User, UserRole } from '../shared/types/domain'
 interface SaveUserPayload {
   name: string
   email: string
+  password?: string
   role: UserRole
 }
 
