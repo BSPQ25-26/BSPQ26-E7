@@ -35,5 +35,3 @@ This application implements the following requirements:
 
 ## Future Development
 The frontend is currently empty and will be developed in subsequent sprints. The backend will continue to be enhanced with additional features and improvements based on the SCRUM backlog.
-
-## first
