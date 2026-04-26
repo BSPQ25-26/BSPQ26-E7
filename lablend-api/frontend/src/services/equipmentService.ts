@@ -11,9 +11,20 @@ interface Page<T> {
   content: T[]
 }
 
+type EquipmentResponse = Page<Equipment> | Equipment[]
+
+const isPageResponse = (response: EquipmentResponse): response is Page<Equipment> => {
+  return !Array.isArray(response)
+}
+
 export const equipmentService = {
   getAll(): Promise<Equipment[]> {
-    return httpClient.get<Page<Equipment>>('/equipment').then(page => page.content || (page as any as Equipment[]))
+    return httpClient.get<EquipmentResponse>('/equipment').then((response) => {
+      if (isPageResponse(response)) {
+        return response.content
+      }
+      return response
+    })
   },
 
   create(payload: SaveEquipmentPayload): Promise<Equipment> {
