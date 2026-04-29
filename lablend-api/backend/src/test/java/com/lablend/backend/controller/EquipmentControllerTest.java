@@ -2,7 +2,12 @@ package com.lablend.backend.controller;
 
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.service.EquipmentService;
-import com.lablend.backend.entity.EquipmentStatus; 
+import com.lablend.backend.entity.EquipmentStatus;
+import com.lablend.backend.entity.User;
+import com.lablend.backend.entity.UserRole;
+import com.lablend.backend.auth.dto.LoginResponse;
+import com.lablend.backend.auth.dto.LoginRequest;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -22,7 +27,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+import org.springframework.http.*;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import com.lablend.backend.repository.UserRepository;
+import static org.junit.jupiter.api.Assertions.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -167,8 +177,8 @@ class EquipmentControllerTest {
     }
 }
 
-@org.springframework.boot.test.context.SpringBootTest(
-    webEnvironment = org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT,
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
         "spring.datasource.url=jdbc:h2:mem:testdb",
         "spring.datasource.driver-class-name=org.h2.Driver",
@@ -176,41 +186,55 @@ class EquipmentControllerTest {
         "spring.jpa.hibernate.ddl-auto=create-drop"
     }
 )
-@org.springframework.context.annotation.Import(EquipmentControllerIntegrationTest.TestSecurityConfig.class)
 class EquipmentControllerIntegrationTest {
 
     @Autowired
-    private org.springframework.boot.test.web.client.TestRestTemplate restTemplate;
+    private TestRestTemplate restTemplate;
 
     @Autowired
     private EquipmentService equipmentService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Test
     void testRemoteGetAllEquipment() {
+        // Create an admin user for authentication
+        User adminUser = new User();
+        adminUser.setName("admin");
+        adminUser.setEmail("admin@lablend.com");
+        adminUser.setPassword(passwordEncoder.encode("admin"));
+        adminUser.setRole(UserRole.ADMIN);
+        userRepository.save(adminUser);
+
+        // Authenticate as the admin
+        LoginRequest loginRequest = 
+            new com.lablend.backend.auth.dto.LoginRequest("admin", "admin@lablend.com", "admin");
+        ResponseEntity<LoginResponse> loginResponse = 
+            restTemplate.postForEntity("/api/auth/login", loginRequest, LoginResponse.class);
+            
+        String token = loginResponse.getBody().token();
+
+        // Create the test equipment
         Equipment e1 = new Equipment();
         e1.setName("Integration Test Scope");
         e1.setType("Test Type");
         e1.setStatus(EquipmentStatus.AVAILABLE);
         equipmentService.createEquipment(e1);
 
-        org.springframework.http.ResponseEntity<String> response =
-            restTemplate.getForEntity("/api/equipment", String.class);
+        // Perform the authenticated request
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        org.junit.jupiter.api.Assertions.assertEquals(org.springframework.http.HttpStatus.OK, response.getStatusCode());
-        org.junit.jupiter.api.Assertions.assertNotNull(response.getBody());
-        org.junit.jupiter.api.Assertions.assertTrue(response.getBody().contains("\"name\":\"Integration Test Scope\""));
-    }
+        ResponseEntity<String> response =
+            restTemplate.exchange("/api/equipment", HttpMethod.GET, requestEntity, String.class);
 
-    @org.springframework.boot.test.context.TestConfiguration
-    static class TestSecurityConfig {
-        @org.springframework.context.annotation.Bean
-        @org.springframework.core.annotation.Order(0)
-        org.springframework.security.web.SecurityFilterChain testFilterChain(
-                org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
-            return http
-                    .csrf(csrf -> csrf.disable())
-                    .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                    .build();
-        }
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("\"name\":\"Integration Test Scope\""));
     }
 }
