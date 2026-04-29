@@ -40,6 +40,10 @@ public class Loan {
     @Enumerated(EnumType.STRING)
     private LoanStatus status;
 
+    /** Whether this loan has already been extended. Each loan can only be extended once. */
+    @Column(name = "extended", nullable = false)
+    private boolean extended = false;
+
     /** Default constructor required by JPA. */
     public Loan() {
     }
@@ -57,6 +61,7 @@ public class Loan {
         this.equipmentId = equipmentId;
         this.loanDate = loanDate;
         this.status = status;
+        this.extended = false;
     }
 
     /** @return the loan identifier */
@@ -107,5 +112,15 @@ public class Loan {
     /** @param status the loan status to set */
     public void setStatus(LoanStatus status) {
         this.status = status;
+    }
+
+    /** @return whether this loan has been extended */
+    public boolean isExtended() {
+        return extended;
+    }
+
+    /** @param extended whether the loan has been extended */
+    public void setExtended(boolean extended) {
+        this.extended = extended;
     }
 }

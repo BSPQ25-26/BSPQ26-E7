@@ -109,6 +109,24 @@ public class LoanController {
     }
 
     /**
+     * Extends the duration of an active loan. Each loan can only be extended once.
+     *
+     * @param id loan identifier
+     * @return 200 with the extended loan, 409 if already extended or not active, 404 if not found
+     */
+    @PutMapping("/{id}/extend")
+    public ResponseEntity<?> extendLoan(@PathVariable Long id) {
+        try {
+            Loan extendedLoan = loanService.extendLoan(id);
+            return ResponseEntity.ok(extendedLoan);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    /**
      * GET endpoint for administrators to list all overdue loans.
      */
     @GetMapping("/overdue")

@@ -57,5 +57,15 @@ public interface LoanService {
      */
     Loan returnLoan(Long id);
 
+    /**
+     * Extends the due date of an active loan. Each loan can only be extended once.
+     *
+     * @param id the loan identifier
+     * @return the updated loan with the extended flag set
+     * @throws IllegalStateException if the loan has already been extended or is not active
+     * @throws RuntimeException if the loan is not found
+     */
+    Loan extendLoan(Long id);
+
     java.util.List<com.lablend.backend.dto.OverdueLoanDTO> getOverdueLoans();
 }
