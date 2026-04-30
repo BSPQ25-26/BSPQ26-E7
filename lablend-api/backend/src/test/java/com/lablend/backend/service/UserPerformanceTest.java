@@ -20,6 +20,11 @@ import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.ResponseEntity;
+import com.lablend.backend.controller.UserController;
+import com.lablend.backend.service.UserService;
+import static org.mockito.Mockito.mock;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,5 +78,42 @@ public class UserPerformanceTest {
 
         Optional<User> found = userService.getUserById(1L);
         assertNotNull(found.orElse(null));
+    }
+
+    @Test
+    @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 100)
+    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 100.0f, maxLatency = 500.0f)
+    public void testUserController_CreateUser_Throughput() {
+        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
+        
+        UserController userController = new UserController();
+        UserService mockService = mock(UserService.class);
+        ReflectionTestUtils.setField(userController, "userService", mockService);
+
+        synchronized(this) {
+            when(mockService.createUser(any(User.class))).thenReturn(user);
+        }
+        
+        ResponseEntity<?> response = userController.createUser(user);
+        assertNotNull(response);
+    }
+
+    @Test
+    @JUnitPerfTest(threads = 20, durationMs = 2000, maxExecutionsPerSecond = 200)
+    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 50.0f, maxLatency = 200.0f)
+    public void testUserController_GetUserById_Throughput() {
+        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
+        user.setId(1L);
+
+        UserController userController = new UserController();
+        UserService mockService = mock(UserService.class);
+        ReflectionTestUtils.setField(userController, "userService", mockService);
+
+        synchronized(this) {
+            when(mockService.getUserById(1L)).thenReturn(Optional.of(user));
+        }
+
+        ResponseEntity<User> response = userController.getUserById(1L);
+        assertNotNull(response);
     }
 }

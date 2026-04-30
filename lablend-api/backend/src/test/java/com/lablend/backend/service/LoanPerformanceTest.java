@@ -27,6 +27,12 @@ import org.mockito.quality.Strictness;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.ResponseEntity;
+import com.lablend.backend.controller.LoanController;
+import com.lablend.backend.service.LoanService;
+import static org.mockito.Mockito.mock;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -73,5 +79,23 @@ public class LoanPerformanceTest {
 
         Loan created = loanService.createLoan(loan);
         assertNotNull(created);
+    }
+
+    @Test
+    @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 50)
+    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 150.0f, maxLatency = 600.0f)
+    public void testLoanController_CreateLoan_Throughput() {
+        Loan loan = new Loan(1L, 2L, LocalDateTime.now(), LoanStatus.ACTIVE);
+
+        LoanController loanController = new LoanController();
+        LoanService mockService = mock(LoanService.class);
+        ReflectionTestUtils.setField(loanController, "loanService", mockService);
+
+        synchronized(this) {
+            when(mockService.createLoan(any(Loan.class))).thenReturn(loan);
+        }
+
+        ResponseEntity<?> response = loanController.createLoan(loan);
+        assertNotNull(response);
     }
 }
