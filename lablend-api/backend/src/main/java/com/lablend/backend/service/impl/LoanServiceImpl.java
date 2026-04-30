@@ -158,13 +158,16 @@ public class LoanServiceImpl implements LoanService {
      */
     @Override
     public List<OverdueLoanDTO> getOverdueLoans() {
-        List<Object[]> results = loanRepository.findOverdueLoansRaw(java.time.LocalDateTime.now());
-        
+
+        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(14);
+
+        List<Object[]> results = loanRepository.findOverdueLoansRaw(cutoffDate);
+
         return results.stream().map(result -> new OverdueLoanDTO(
             ((Number) result[0]).longValue(), 
-            (String) result[1],               
-            (String) result[2],               
-            (String) result[3],               
+            (String) result[1],
+            (String) result[2],
+            (String) result[3],
             ((java.sql.Timestamp) result[4]).toLocalDateTime() 
         )).collect(java.util.stream.Collectors.toList());
     }
