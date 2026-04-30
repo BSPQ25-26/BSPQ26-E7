@@ -48,7 +48,6 @@ public class LoanRepositoryTest {
     public void testCountByUserIdAndStatus() {
         loanRepository.save(loan);
         
-        /
         long activeLoans = loanRepository.countByUserIdAndStatus(1L, LoanStatus.ACTIVE);
         assertThat(activeLoans).isEqualTo(1L);
 
