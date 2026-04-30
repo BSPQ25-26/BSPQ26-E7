@@ -31,4 +31,8 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
        nativeQuery = true)
     List<Object[]> findOverdueLoansRaw(@Param("now") java.time.LocalDateTime now);
     long countByUserIdAndStatus(Long userId, LoanStatus status);
+
+    @Query("SELECT l FROM Loan l WHERE l.dueDate < CURRENT_DATE AND l.status = 'ACTIVE'")
+    List<Loan> findOverdueLoans();
+    
 }
