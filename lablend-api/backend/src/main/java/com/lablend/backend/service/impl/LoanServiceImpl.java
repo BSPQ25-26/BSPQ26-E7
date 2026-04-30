@@ -146,6 +146,9 @@ public class LoanServiceImpl implements LoanService {
             throw new IllegalStateException("This loan has already been extended once");
         }
 
+        LocalDateTime currentLoanDate = loan.getLoanDate() != null ? loan.getLoanDate() : LocalDateTime.now();
+        loan.setLoanDate(currentLoanDate.plusDays(14));
+
         loan.setExtended(true);
 
         return loanRepository.save(loan);
