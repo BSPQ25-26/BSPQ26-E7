@@ -126,6 +126,32 @@ public class LoanServiceImpl implements LoanService {
     }
 
     /**
+     * Extends an active loan. Each loan may only be extended once.
+     *
+     * @param id loan identifier
+     * @return the updated loan with the extended flag set to true
+     * @throws IllegalStateException if the loan is not active or has already been extended
+     */
+    @Transactional
+    @Override
+    public Loan extendLoan(Long id) {
+        Loan loan = loanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
+
+        if (loan.getStatus() != LoanStatus.ACTIVE) {
+            throw new IllegalStateException("Only active loans can be extended");
+        }
+
+        if (loan.isExtended()) {
+            throw new IllegalStateException("This loan has already been extended once");
+        }
+
+        loan.setExtended(true);
+
+        return loanRepository.save(loan);
+    }
+
+    /**
      * Retrieves all active loans that are past their due date.
      * Maps raw database results into OverdueLoanDTO objects.
      * @return List of overdue loan details for admin use.

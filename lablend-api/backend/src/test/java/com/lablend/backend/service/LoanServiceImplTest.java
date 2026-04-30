@@ -159,4 +159,54 @@ class LoanServiceImplTest {
         assertTrue(exception.getMessage().contains("User has reached the maximum limit of 3 active loans"));
         verify(loanRepository, never()).save(any(Loan.class));
     }
+
+    @Test
+    void extendLoan_Success() {
+        Loan loan = new Loan();
+        loan.setId(1L);
+        loan.setStatus(LoanStatus.ACTIVE);
+        loan.setExtended(false);
+
+        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+        when(loanRepository.save(any(Loan.class))).thenReturn(loan);
+
+        Loan result = loanService.extendLoan(1L);
+
+        assertTrue(result.isExtended());
+        verify(loanRepository).save(loan);
+    }
+
+    @Test
+    void extendLoan_AlreadyExtended_ShouldThrowException() {
+        Loan loan = new Loan();
+        loan.setId(1L);
+        loan.setStatus(LoanStatus.ACTIVE);
+        loan.setExtended(true);
+
+        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            loanService.extendLoan(1L);
+        });
+
+        assertTrue(exception.getMessage().contains("already been extended"));
+        verify(loanRepository, never()).save(any(Loan.class));
+    }
+
+    @Test
+    void extendLoan_NotActive_ShouldThrowException() {
+        Loan loan = new Loan();
+        loan.setId(1L);
+        loan.setStatus(LoanStatus.COMPLETED);
+        loan.setExtended(false);
+
+        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            loanService.extendLoan(1L);
+        });
+
+        assertTrue(exception.getMessage().contains("Only active loans can be extended"));
+        verify(loanRepository, never()).save(any(Loan.class));
+    }
 }
