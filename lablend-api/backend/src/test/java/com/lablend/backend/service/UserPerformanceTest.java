@@ -51,7 +51,6 @@ public class UserPerformanceTest {
         User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
         
         synchronized(this) {
-            when(userRepository.existsByEmail("jorge@deusto.com")).thenReturn(false);
             when(passwordEncoder.encode(any(String.class))).thenReturn("encoded_pass");
             when(userRepository.save(any(User.class))).thenReturn(user);
         }
