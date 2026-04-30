@@ -11,7 +11,6 @@ import org.springframework.test.annotation.Rollback;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@Rollback(false)
 public class UserRepositoryTest {
 
     @Autowired
@@ -47,7 +46,6 @@ public class UserRepositoryTest {
 
     @Test
     public void testFindUserByName() {
-        // Probamos el método personalizado findByName()
         userRepository.save(user);
         User foundUser = userRepository.findByName("Jorge").orElse(null);
         assertThat(foundUser).isNotNull();

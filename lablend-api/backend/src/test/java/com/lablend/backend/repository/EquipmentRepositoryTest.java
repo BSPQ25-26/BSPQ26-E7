@@ -11,6 +11,7 @@ import org.springframework.test.annotation.Rollback;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
+@Rollback(false)
 public class EquipmentRepositoryTest {
 
     @Autowired
