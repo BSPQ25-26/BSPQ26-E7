@@ -55,8 +55,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setLoanDate(LocalDateTime.now());
         loan.setStatus(LoanStatus.ACTIVE);
 
-        equipment.setStatus(EquipmentStatus.RESERVED);
-        equipmentRepository.save(equipment);
+        updateEquipmentStatus(loan.getEquipmentId(), EquipmentStatus.RESERVED);
 
         return loanRepository.save(loan);
     }
@@ -86,10 +85,7 @@ public class LoanServiceImpl implements LoanService {
         if (loan.getStatus() == LoanStatus.ACTIVE
                 && (loanDetails.getStatus() == LoanStatus.COMPLETED
                     || loanDetails.getStatus() == LoanStatus.CANCELLED)) {
-            Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
-                    .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
-            equipment.setStatus(EquipmentStatus.AVAILABLE);
-            equipmentRepository.save(equipment);
+            updateEquipmentStatus(loan.getEquipmentId(), EquipmentStatus.AVAILABLE);
         }
 
         loan.setUserId(loanDetails.getUserId());
@@ -109,10 +105,7 @@ public class LoanServiceImpl implements LoanService {
 
         // Release equipment if the loan being deleted is still active
         if (loan.getStatus() == LoanStatus.ACTIVE) {
-            Equipment equipment = equipmentRepository.findById(loan.getEquipmentId())
-                    .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + loan.getEquipmentId()));
-            equipment.setStatus(EquipmentStatus.AVAILABLE);
-            equipmentRepository.save(equipment);
+            updateEquipmentStatus(loan.getEquipmentId(), EquipmentStatus.AVAILABLE);
         }
 
         loanRepository.delete(loan);
@@ -127,10 +120,7 @@ public class LoanServiceImpl implements LoanService {
 
         loan.setStatus(LoanStatus.COMPLETED);
 
-        equipmentRepository.findById(loan.getEquipmentId()).ifPresent(equipment -> {
-            equipment.setStatus(EquipmentStatus.AVAILABLE);
-            equipmentRepository.save(equipment);
-        });
+        updateEquipmentStatus(loan.getEquipmentId(), EquipmentStatus.AVAILABLE);
 
         return loanRepository.save(loan);
     }
@@ -152,4 +142,13 @@ public class LoanServiceImpl implements LoanService {
             ((java.sql.Timestamp) result[4]).toLocalDateTime() 
         )).collect(java.util.stream.Collectors.toList());
     }
+
+    private void updateEquipmentStatus(Long equipmentId, EquipmentStatus status) {
+    Equipment equipment = equipmentRepository.findById(equipmentId)
+            .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + equipmentId));
+
+    equipment.setStatus(status);
+    equipmentRepository.save(equipment);
+    }
+    
 }
