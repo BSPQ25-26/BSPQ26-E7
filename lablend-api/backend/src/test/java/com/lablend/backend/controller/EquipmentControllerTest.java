@@ -2,7 +2,12 @@ package com.lablend.backend.controller;
 
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.service.EquipmentService;
-import com.lablend.backend.entity.EquipmentStatus; 
+import com.lablend.backend.entity.EquipmentStatus;
+import com.lablend.backend.entity.User;
+import com.lablend.backend.entity.UserRole;
+import com.lablend.backend.auth.dto.LoginResponse;
+import com.lablend.backend.auth.dto.LoginRequest;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -22,7 +27,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+import org.springframework.http.*;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import com.lablend.backend.repository.UserRepository;
+import static org.junit.jupiter.api.Assertions.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
