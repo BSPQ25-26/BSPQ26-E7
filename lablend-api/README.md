@@ -34,4 +34,4 @@ This application implements the following requirements:
 5. **Run Tests**: Execute tests to ensure functionality using `mvn test` in the backend directory.
 
 ## Future Development
-The frontend is currently empty and will be developed in subsequent sprints. The backend will continue to be enhanced with additional features and improvements based on the SCRUM backlog.
+The frontend is currently empty and will be developed in subsequent sprints.The backend will continue to be enhanced with additional features and improvements based on the SCRUM backlog.
