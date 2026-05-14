@@ -15,30 +15,31 @@ import com.lablend.backend.entity.UserRole;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
 import com.lablend.backend.repository.UserRepository;
-import com.lablend.backend.service.impl.LoanServiceImpl;
+import com.lablend.backend.controller.LoanController;
+
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.UUID;
 
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.http.ResponseEntity;
-import com.lablend.backend.controller.LoanController;
-import com.lablend.backend.service.LoanService;
-import static org.mockito.Mockito.mock;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
-@ExtendWith({MockitoExtension.class, JUnitPerfInterceptor.class})
-@MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(JUnitPerfInterceptor.class)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = {
+        "spring.datasource.url=jdbc:h2:mem:testdb-perf",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+    }
+)
 public class LoanPerformanceTest {
 
     @JUnitPerfTestActiveConfig
@@ -46,36 +47,44 @@ public class LoanPerformanceTest {
             .reportGenerator(new HtmlReportGenerator("target/site/perf-reports/loan_performance_report.html"))
             .build();
 
-    @InjectMocks
-    private LoanServiceImpl loanService;
+    @Autowired
+    private LoanService loanService;
 
-    @Mock
+    @Autowired
+    private LoanController loanController;
+
+    @Autowired
     private LoanRepository loanRepository;
 
-    @Mock
+    @Autowired
     private EquipmentRepository equipmentRepository;
 
-    @Mock
+    @Autowired
     private UserRepository userRepository;
 
+    @AfterEach
+    void tearDown() {
+        try {
+            loanRepository.deleteAll();
+            equipmentRepository.deleteAll();
+            userRepository.deleteAll();
+        } catch (Exception e) {
+            // Ignore concurrent deletion issues
+        }
+    }
     
     @Test
     @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 50)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 150.0f, maxLatency = 600.0f)
     public void testLoanCreation_Throughput() {
-        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
-        user.setId(1L);
+        String uniqueEmail = "jorge." + UUID.randomUUID().toString() + "@deusto.com";
+        User user = new User("Jorge", uniqueEmail, "password", UserRole.USER);
+        User savedUser = userRepository.save(user);
 
         Equipment equipment = new Equipment("Microscope", "Optical", EquipmentStatus.AVAILABLE);
-        equipment.setId(2L);
+        Equipment savedEquipment = equipmentRepository.save(equipment);
 
-        Loan loan = new Loan(1L, 2L, LocalDateTime.now(), LoanStatus.ACTIVE);
-
-        synchronized(this) {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-            when(equipmentRepository.findById(2L)).thenReturn(Optional.of(equipment));
-            when(loanRepository.save(any(Loan.class))).thenReturn(loan);
-        }
+        Loan loan = new Loan(savedUser.getId(), savedEquipment.getId(), LocalDateTime.now(), LoanStatus.ACTIVE);
 
         Loan created = loanService.createLoan(loan);
         assertNotNull(created);
@@ -85,15 +94,14 @@ public class LoanPerformanceTest {
     @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 50)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 150.0f, maxLatency = 600.0f)
     public void testLoanController_CreateLoan_Throughput() {
-        Loan loan = new Loan(1L, 2L, LocalDateTime.now(), LoanStatus.ACTIVE);
+        String uniqueEmail = "jorge.controller." + UUID.randomUUID().toString() + "@deusto.com";
+        User user = new User("Jorge", uniqueEmail, "password", UserRole.USER);
+        User savedUser = userRepository.save(user);
 
-        LoanController loanController = new LoanController();
-        LoanService mockService = mock(LoanService.class);
-        ReflectionTestUtils.setField(loanController, "loanService", mockService);
+        Equipment equipment = new Equipment("Microscope Controller", "Optical", EquipmentStatus.AVAILABLE);
+        Equipment savedEquipment = equipmentRepository.save(equipment);
 
-        synchronized(this) {
-            when(mockService.createLoan(any(Loan.class))).thenReturn(loan);
-        }
+        Loan loan = new Loan(savedUser.getId(), savedEquipment.getId(), LocalDateTime.now(), LoanStatus.ACTIVE);
 
         ResponseEntity<?> response = loanController.createLoan(loan);
         assertNotNull(response);

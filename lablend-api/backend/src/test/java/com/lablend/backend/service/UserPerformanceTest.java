@@ -9,29 +9,30 @@ import com.github.noconnor.junitperf.JUnitPerfTestActiveConfig;
 import com.lablend.backend.entity.User;
 import com.lablend.backend.entity.UserRole;
 import com.lablend.backend.repository.UserRepository;
-import com.lablend.backend.service.impl.UserServiceImpl;
+import com.lablend.backend.controller.UserController;
+
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.Optional;
-import org.springframework.test.util.ReflectionTestUtils;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import com.lablend.backend.controller.UserController;
-import com.lablend.backend.service.UserService;
-import static org.mockito.Mockito.mock;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
-@ExtendWith({MockitoExtension.class, JUnitPerfInterceptor.class})
-@MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(JUnitPerfInterceptor.class)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = {
+        "spring.datasource.url=jdbc:h2:mem:testdb-perf",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+    }
+)
 public class UserPerformanceTest {
 
     @JUnitPerfTestActiveConfig
@@ -39,44 +40,44 @@ public class UserPerformanceTest {
             .reportGenerator(new HtmlReportGenerator("target/site/perf-reports/user_performance_report.html"))
             .build();
 
-    @InjectMocks
-    private UserServiceImpl userService;
+    @Autowired
+    private UserService userService;
 
-    @Mock
+    @Autowired
+    private UserController userController;
+
+    @Autowired
     private UserRepository userRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    @AfterEach
+    void tearDown() {
+        try {
+            userRepository.deleteAll();
+        } catch (Exception e) {
+            // Ignore concurrent deletion issues
+        }
+    }
 
-   
     @Test
     @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 100)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, executionsPerSec = 10, meanLatency = 100.0f, maxLatency = 500.0f)
     public void testUserCreation_Throughput() {
-        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
-        
-        synchronized(this) {
-            when(passwordEncoder.encode(any(String.class))).thenReturn("encoded_pass");
-            when(userRepository.save(any(User.class))).thenReturn(user);
-        }
+        String uniqueEmail = "jorge." + UUID.randomUUID().toString() + "@deusto.com";
+        User user = new User("Jorge", uniqueEmail, "password", UserRole.USER);
         
         User created = userService.createUser(user);
         assertNotNull(created);
     }
 
-   
     @Test
     @JUnitPerfTest(threads = 20, durationMs = 2000, maxExecutionsPerSecond = 200)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 50.0f, maxLatency = 200.0f)
     public void testGetUserById_Throughput() {
-        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
-        user.setId(1L);
+        String uniqueEmail = "jorge." + UUID.randomUUID().toString() + "@deusto.com";
+        User user = new User("Jorge", uniqueEmail, "password", UserRole.USER);
+        User created = userRepository.save(user);
 
-        synchronized(this) {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        }
-
-        Optional<User> found = userService.getUserById(1L);
+        Optional<User> found = userService.getUserById(created.getId());
         assertNotNull(found.orElse(null));
     }
 
@@ -84,15 +85,8 @@ public class UserPerformanceTest {
     @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 100)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 100.0f, maxLatency = 500.0f)
     public void testUserController_CreateUser_Throughput() {
-        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
-        
-        UserController userController = new UserController();
-        UserService mockService = mock(UserService.class);
-        ReflectionTestUtils.setField(userController, "userService", mockService);
-
-        synchronized(this) {
-            when(mockService.createUser(any(User.class))).thenReturn(user);
-        }
+        String uniqueEmail = "jorge." + UUID.randomUUID().toString() + "@deusto.com";
+        User user = new User("Jorge", uniqueEmail, "password", UserRole.USER);
         
         ResponseEntity<?> response = userController.createUser(user);
         assertNotNull(response);
@@ -102,18 +96,11 @@ public class UserPerformanceTest {
     @JUnitPerfTest(threads = 20, durationMs = 2000, maxExecutionsPerSecond = 200)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 50.0f, maxLatency = 200.0f)
     public void testUserController_GetUserById_Throughput() {
-        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
-        user.setId(1L);
+        String uniqueEmail = "jorge." + UUID.randomUUID().toString() + "@deusto.com";
+        User user = new User("Jorge", uniqueEmail, "password", UserRole.USER);
+        User created = userRepository.save(user);
 
-        UserController userController = new UserController();
-        UserService mockService = mock(UserService.class);
-        ReflectionTestUtils.setField(userController, "userService", mockService);
-
-        synchronized(this) {
-            when(mockService.getUserById(1L)).thenReturn(Optional.of(user));
-        }
-
-        ResponseEntity<User> response = userController.getUserById(1L);
+        ResponseEntity<User> response = userController.getUserById(created.getId());
         assertNotNull(response);
     }
 }
