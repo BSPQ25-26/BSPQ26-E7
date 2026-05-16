@@ -7,6 +7,9 @@
 # test reports
 target/
 
+# Sphinx build output
+lablend-api/backend/docs/_build/
+
 # Log file
 *.log
 
