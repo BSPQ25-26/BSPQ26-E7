@@ -7,8 +7,10 @@ import org.springframework.stereotype.Service;
 
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.EquipmentStatus;
+import com.lablend.backend.entity.WaitingList;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.service.EquipmentService;
+import com.lablend.backend.service.WaitingListService;
 
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -35,14 +37,16 @@ public class EquipmentServiceImpl implements EquipmentService {
     private static final Logger logger = LoggerFactory.getLogger(EquipmentServiceImpl.class);
 
     private final EquipmentRepository equipmentRepository;
+    private final WaitingListService waitingListService;
 
     /**
      * Constructor-based dependency injection for the equipment repository.
      * @param equipmentRepository The persistence repository for equipment data.
      */
     @Autowired
-    public EquipmentServiceImpl(EquipmentRepository equipmentRepository) {
+    public EquipmentServiceImpl(EquipmentRepository equipmentRepository, WaitingListService waitingListService) {
         this.equipmentRepository = equipmentRepository;
+        this.waitingListService = waitingListService;
     }
 
     /**
@@ -121,12 +125,23 @@ public class EquipmentServiceImpl implements EquipmentService {
             case UNDER_MAINTENANCE -> equipment.startMaintenance();
             case AVAILABLE -> {
                 if (equipment.getStatus() == EquipmentStatus.UNDER_MAINTENANCE) {
-                equipment.finishMaintenance();
-                } 
-                else {
-                equipment.setStatus(EquipmentStatus.AVAILABLE);
+                    equipment.finishMaintenance();
+                } else {
+                    equipment.setStatus(EquipmentStatus.AVAILABLE);
                 }
+
+                prioritizeNextWaitlistedStudent(equipment);
             }
+        }
+    }
+
+    private void prioritizeNextWaitlistedStudent(Equipment equipment) {
+        WaitingList nextStudent = waitingListService.getNextInLine(equipment.getId());
+
+        if (nextStudent != null) {
+            equipment.reserve();
+            waitingListService.removeFromQueue(nextStudent.getUserId(), equipment.getId());
+            logger.info("Equipment ID {} reserved for waitlisted student ID {}", equipment.getId(), nextStudent.getUserId());
         }
     }
 
