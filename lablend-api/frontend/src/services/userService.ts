@@ -24,6 +24,17 @@ export const userService = {
   remove(id: number): Promise<void> {
     return httpClient.delete(`/users/${id}`)
   },
+
+  getFlagged(): Promise<User[]> {
+    return httpClient.get<User[]>('/users/dashboard/flagged')
+  },
+
+  unblock(id: number): Promise<void> {
+    return httpClient.put<void, {}>(`/users/${id}/unblock`, {})
+  },
+  
+  block(id: number): Promise<void> {
+    return httpClient.put<void, {}>(`/users/${id}/block`, {})  }
 }
 
 export type { SaveUserPayload }

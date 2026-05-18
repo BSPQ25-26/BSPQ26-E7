@@ -185,8 +185,13 @@ class UserControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    @Test
+   @Test
     void testUnblockUser_Success() throws Exception {
+        User regularUser = new User();
+        regularUser.setId(1L);
+        regularUser.setRequiresManualReview(false);
+
+        when(userService.getUserById(1L)).thenReturn(Optional.of(regularUser));
         doNothing().when(userService).unblockUser(1L);
 
         mockMvc.perform(put("/api/users/1/unblock"))
@@ -217,5 +222,25 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Blocked User"))
                 .andExpect(jsonPath("$[0].status").value("BLOCKED"));
+    }
+
+    @Test
+    void testUnblockUser_Forbidden_WhenManualReviewIsRequired() throws Exception {
+        User criticalUser = new User();
+        criticalUser.setId(1L);
+        criticalUser.setName("John Recidivist");
+        criticalUser.setEmail("john@uni.com");
+        criticalUser.setRole(UserRole.USER);
+        criticalUser.setStatus(UserStatus.BLOCKED);
+        criticalUser.setPenaltyCount(3);
+        criticalUser.setRequiresManualReview(true);
+
+        when(userService.getUserById(1L)).thenReturn(Optional.of(criticalUser));
+
+        mockMvc.perform(put("/api/users/1/unblock"))
+                .andDo(print())
+                // Verificamos que devuelva 403 Forbidden debido al bloqueo por reincidencia
+                .andExpect(status().isForbidden())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Account requires a manual administrative override review")));
     }
 }
