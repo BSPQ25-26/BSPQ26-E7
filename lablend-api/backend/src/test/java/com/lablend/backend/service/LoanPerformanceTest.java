@@ -67,10 +67,9 @@ public class LoanPerformanceTest {
 
         synchronized(this) {
             when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+            when(loanRepository.countByUserIdAndStatus(1L, LoanStatus.ACTIVE)).thenReturn(0L);
             when(equipmentRepository.findById(2L)).thenReturn(Optional.of(equipment));
             when(loanRepository.save(any(Loan.class))).thenReturn(loan);
-            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-            when(loanRepository.countByUserIdAndStatus(1L, LoanStatus.ACTIVE)).thenReturn(0L);
         }
 
         Loan created = loanService.createLoan(loan);
