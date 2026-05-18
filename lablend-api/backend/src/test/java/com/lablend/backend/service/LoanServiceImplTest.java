@@ -4,8 +4,12 @@ import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.EquipmentStatus;
 import com.lablend.backend.entity.Loan;
 import com.lablend.backend.entity.LoanStatus;
+import com.lablend.backend.entity.User;
+import com.lablend.backend.entity.UserStatus;
+import com.lablend.backend.entity.UserRole;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
+import com.lablend.backend.repository.UserRepository;
 import com.lablend.backend.service.impl.LoanServiceImpl;
 import com.lablend.backend.dto.OverdueLoanDTO;
 import java.util.Optional;
@@ -36,8 +40,13 @@ class LoanServiceImplTest {
     @Mock
     private EquipmentRepository equipmentRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
+
     @InjectMocks
     private LoanServiceImpl loanService;
+
 
     @BeforeEach
     void setUp() {
@@ -47,12 +56,18 @@ class LoanServiceImplTest {
     @SuppressWarnings("null")
     @Test
     void createLoan_WhenEquipmentIsAvailable_ShouldCreateLoan() {
+        User user = new User();
+        user.setId(2L);
+        user.setStatus(UserStatus.ACTIVE);
+
         Equipment equipment = new Equipment("Microscope", "Lab", EquipmentStatus.AVAILABLE);
         equipment.setId(1L);
-        
+
         Loan savedLoan = new Loan();
         savedLoan.setId(100L);
 
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(loanRepository.countByUserIdAndStatus(2L, LoanStatus.ACTIVE)).thenReturn(0L);
         when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
         when(loanRepository.save(any(Loan.class))).thenReturn(savedLoan);
 
@@ -70,9 +85,15 @@ class LoanServiceImplTest {
     @SuppressWarnings("null")
     @Test
     void createLoan_WhenEquipmentIsNotAvailable_ShouldThrowException() {
+        User user = new User();
+        user.setId(2L);
+        user.setStatus(UserStatus.ACTIVE);
+
         Equipment equipment = new Equipment("Microscope", "Lab", EquipmentStatus.RESERVED);
         equipment.setId(1L);
 
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(loanRepository.countByUserIdAndStatus(2L, LoanStatus.ACTIVE)).thenReturn(0L);
         when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
 
         Loan inputLoan = new Loan();
@@ -142,10 +163,14 @@ class LoanServiceImplTest {
     @SuppressWarnings("null")
     @Test
     void createLoan_WhenUserHasThreeActiveLoans_ShouldThrowException() {
+        User user = new User();
+        user.setId(2L);
+        user.setStatus(UserStatus.ACTIVE);
+
         Equipment equipment = new Equipment("Microscope", "Lab", EquipmentStatus.AVAILABLE);
         equipment.setId(1L);
 
-        when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
         when(loanRepository.countByUserIdAndStatus(2L, LoanStatus.ACTIVE)).thenReturn(3L);
 
         Loan inputLoan = new Loan();
@@ -317,5 +342,26 @@ class LoanServiceImplTest {
         });
 
         assertTrue(exception.getMessage().contains("Loan not found with id: 1"));
+    }
+
+    @Test
+    void createLoan_WhenUserIsBlocked_ShouldThrowException() {
+        User user = new User();
+        user.setId(2L);
+        user.setStatus(UserStatus.BLOCKED);
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+
+        Loan inputLoan = new Loan();
+        inputLoan.setEquipmentId(1L);
+        inputLoan.setUserId(2L);
+
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            loanService.createLoan(inputLoan);
+        });
+
+        assertTrue(exception.getMessage().contains("User is blocked and cannot borrow equipment"));
+        verify(loanRepository, never()).save(any(Loan.class));
+        verify(equipmentRepository, never()).findById(any());
     }
 }

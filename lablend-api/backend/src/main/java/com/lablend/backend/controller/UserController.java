@@ -64,6 +64,16 @@ public class UserController {
         }
     }
     /**
+     * Retrieves all blocked users.
+     * Requires ADMIN role.
+     *
+     * @return List of blocked users with HTTP 200.
+     */
+    @GetMapping("/blocked")
+    public ResponseEntity<List<User>> getBlockedUsers() {
+        return ResponseEntity.ok(userService.getBlockedUsers());
+    }
+    /**
      * Retrieves a user by ID.
      * @param id The ID of the user to retrieve.
      * @return The user with HTTP 200, or HTTP 404 if not found.
@@ -82,6 +92,46 @@ public class UserController {
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
+
+
+    /**
+     * Blocks a user by ID. Only USER-role accounts can be blocked.
+     * Requires ADMIN role.
+     *
+     * @param id The ID of the user to block.
+     * @return HTTP 200 on success, 404 if not found, 409 if target is an admin.
+     */
+    @PutMapping("/{id}/block")
+    public ResponseEntity<?> blockUser(@PathVariable Long id) {
+        try {
+            userService.blockUser(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+
+    /**
+     * Unblocks a previously blocked user.
+     * Requires ADMIN role.
+     *
+     * @param id The ID of the user to unblock.
+     * @return HTTP 200 on success, 404 if not found.
+     */
+    @PutMapping("/{id}/unblock")
+    public ResponseEntity<?> unblockUser(@PathVariable Long id) {
+        try {
+            userService.unblockUser(id);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    
 
     
 
