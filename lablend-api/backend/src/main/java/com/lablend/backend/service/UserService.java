@@ -14,4 +14,8 @@ public interface UserService {
     void deleteUser(Long id);
     Optional<User> getUserById(Long id);
     List<User> getAllUsers();
+    void blockUser(Long id);
+    void unblockUser(Long id);
+    List<User> getBlockedUsers();
+    boolean isUserBlocked(Long id);
 }

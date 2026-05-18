@@ -15,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.lablend.backend.entity.UserStatus;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -78,5 +80,37 @@ public class LoanAcceptanceTest {
         assertEquals(EquipmentStatus.RESERVED, updatedEq.getStatus());
 
         logger.info("Test de Aceptacion superado: El ciclo completo de prestamo funciono como se esperaba.");
+    }
+
+    /**Blocked user test */
+    @Test
+    public void blockedUserCannotBorrowEquipment() {
+        logger.info("Iniciando Test de Aceptacion: Usuario bloqueado no puede solicitar prestamo");
+
+        User blocked = new User();
+        blocked.setName("blocked_student");
+        blocked.setEmail("blocked@deusto.es");
+        blocked.setPassword("12345");
+        blocked.setRole(UserRole.USER);
+        blocked.setStatus(UserStatus.BLOCKED);
+        blocked = userRepository.save(blocked);
+
+        Equipment eq = new Equipment("Microscopio", "Optica", EquipmentStatus.AVAILABLE);
+        eq = equipmentRepository.save(eq);
+
+        final Long userId = blocked.getId();
+        final Long equipmentId = eq.getId();
+
+        Loan loan = new Loan();
+        loan.setUserId(userId);
+        loan.setEquipmentId(equipmentId);
+
+        IllegalStateException ex = assertThrows(
+            IllegalStateException.class,
+            () -> loanService.createLoan(loan)
+        );
+        assertEquals("User is blocked and cannot borrow equipment", ex.getMessage());
+
+        logger.info("Test de Aceptacion superado: Usuario bloqueado fue rechazado correctamente.");
     }
 }

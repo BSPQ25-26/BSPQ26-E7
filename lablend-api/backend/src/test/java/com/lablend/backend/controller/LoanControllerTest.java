@@ -217,4 +217,16 @@ class LoanControllerTest {
                 .andExpect(jsonPath("$[0].userName").value("Test User"))
                 .andExpect(jsonPath("$[0].equipmentName").value("Microscope"));
     }
+
+    @Test
+    void createLoan_BlockedUser_ShouldReturn409() throws Exception {
+        when(loanService.createLoan(any(Loan.class)))
+                .thenThrow(new IllegalStateException("User is blocked and cannot borrow equipment"));
+
+        mockMvc.perform(post("/api/loans")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(testLoan)))
+                .andExpect(status().isConflict())
+                .andExpect(content().string("User is blocked and cannot borrow equipment"));
+    }
 }

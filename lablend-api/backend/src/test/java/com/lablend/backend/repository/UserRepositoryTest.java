@@ -1,11 +1,14 @@
 package com.lablend.backend.repository;
 
+import java.util.List;
 import com.lablend.backend.entity.User;
+import com.lablend.backend.entity.UserStatus;
 import com.lablend.backend.entity.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,5 +68,24 @@ public class UserRepositoryTest {
         userRepository.delete(savedUser);
         User deletedUser = userRepository.findById(savedUser.getId()).orElse(null);
         assertThat(deletedUser).isNull();
+    }
+
+    @Test
+    public void testFindByStatus_ActiveUsers() {
+        userRepository.save(user); 
+
+        List<User> activeUsers = userRepository.findByStatus(UserStatus.ACTIVE);
+        assertThat(activeUsers).isNotEmpty();
+        assertThat(activeUsers).allMatch(u -> u.getStatus() == UserStatus.ACTIVE);
+    }
+
+    @Test
+    public void testFindByStatus_BlockedUsers() {
+        user.setStatus(UserStatus.BLOCKED);
+        userRepository.save(user);
+
+        List<User> blockedUsers = userRepository.findByStatus(UserStatus.BLOCKED);
+        assertThat(blockedUsers).hasSize(1);
+        assertThat(blockedUsers.get(0).getName()).isEqualTo("Jorge");
     }
 }
