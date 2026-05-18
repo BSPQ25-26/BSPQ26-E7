@@ -13,6 +13,8 @@ import com.lablend.backend.auth.dto.LoginResponse;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -31,6 +33,8 @@ import static org.junit.jupiter.api.Assertions.*;
     }
 )
 class LoanControllerIntegrationTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(LoanControllerIntegrationTest.class);
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -56,6 +60,9 @@ class LoanControllerIntegrationTest {
 
     @Test
     void testRemoteCreateAndGetLoan() {
+        logger.info("Iniciando test de integracion: Crear y obtener prestamo de forma remota");
+
+        logger.debug("Preparando datos de prueba: Usuario Admin y Equipo...");
         User adminUser = new User();
         adminUser.setName("Admin Loan");
         adminUser.setEmail("admin.loan@lablend.com");
@@ -69,6 +76,7 @@ class LoanControllerIntegrationTest {
         equipment.setStatus(EquipmentStatus.AVAILABLE);
         Equipment savedEquipment = equipmentRepository.save(equipment);
 
+        logger.info("Autenticando usuario y obteniendo token JWT...");
         LoginRequest loginRequest = new LoginRequest("Admin Loan", "admin.loan@lablend.com", "admin");
         ResponseEntity<LoginResponse> loginResponse = 
             restTemplate.postForEntity("/api/auth/login", loginRequest, LoginResponse.class);
@@ -89,14 +97,18 @@ class LoanControllerIntegrationTest {
             
         HttpEntity<String> createRequestEntity = new HttpEntity<>(newLoanJson, headers);
 
+        logger.debug("Enviando peticion POST a /api/loans para crear el prestamo...");
         ResponseEntity<Loan> createResponse =
             restTemplate.exchange("/api/loans", HttpMethod.POST, createRequestEntity, Loan.class);
 
         assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
         assertNotNull(createResponse.getBody());
         Long newLoanId = createResponse.getBody().getId();
+        logger.info("Prestamo creado con exito. ID generado: {}", newLoanId);
+        
         HttpEntity<Void> getRequestEntity = new HttpEntity<>(headers);
         
+        logger.debug("Verificando la obtencion del prestamo recien creado mediante GET...");
         ResponseEntity<Loan> getResponse =
             restTemplate.exchange("/api/loans/" + newLoanId, HttpMethod.GET, getRequestEntity, Loan.class);
 
@@ -106,5 +118,7 @@ class LoanControllerIntegrationTest {
         
         Equipment updatedEquipment = equipmentRepository.findById(savedEquipment.getId()).orElseThrow();
         assertEquals(EquipmentStatus.RESERVED, updatedEquipment.getStatus());
+        
+        logger.info("Test de integracion de prestamos finalizado correctamente. El estado del equipo es RESERVED.");
     }
 }
