@@ -42,6 +42,12 @@ public class User {
     @Column(nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
 
+    @Column(nullable = false)
+    private int penaltyCount = 0;
+
+    @Column(nullable = false)
+    private boolean requiresManualReview = false;
+
     /** Default constructor */
     public User() {
     }
@@ -133,5 +139,21 @@ public class User {
     /** Setter for the status of a user */
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public int getPenaltyCount() {
+        return penaltyCount;
+    }
+
+    public void setPenaltyCount(int penaltyCount) {
+        this.penaltyCount = penaltyCount;
+    }
+
+    public boolean isRequiresManualReview() {
+        return requiresManualReview;
+    }
+
+    public void setRequiresManualReview(boolean requiresManualReview) {
+        this.requiresManualReview = requiresManualReview;
     }
 }
