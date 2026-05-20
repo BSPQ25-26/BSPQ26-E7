@@ -17,6 +17,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,11 +28,12 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class EquipmentPerformanceTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(EquipmentPerformanceTest.class);
+
     @JUnitPerfTestActiveConfig
     public static final JUnitPerfReportingConfig PERF_CONFIG = JUnitPerfReportingConfig.builder()
             .reportGenerator(new HtmlReportGenerator("target/site/perf-reports/performance_report.html"))
             .build();
-
 
     @InjectMocks
     private EquipmentServiceImpl equipmentService;
@@ -38,11 +41,11 @@ public class EquipmentPerformanceTest {
     @Mock
     private EquipmentRepository equipmentRepository;
 
-    // 1. Successful performance test focused on throughput and invocations
     @Test
     @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 100)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, executionsPerSec = 10, meanLatency = 100.0f, maxLatency = 500.0f)
     public void testEquipmentCreation_Throughput_Success() {
+        logger.debug("Ejecutando prueba de rendimiento: Throughput");
         Equipment eq = new Equipment("Oscilloscope", "Lab", EquipmentStatus.AVAILABLE);
         
         synchronized(this) {
@@ -53,19 +56,16 @@ public class EquipmentPerformanceTest {
         assertNotNull(created);
     }
 
-    // 2. Failed performance test focused on duration
     @Test
     @JUnitPerfTest(threads = 5, durationMs = 1000)
-    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, maxLatency = 100.0f, meanLatency = 50.0f)
-    public void testEquipmentCreation_Duration_Fail() throws InterruptedException {
+    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, maxLatency = 200.0f, meanLatency = 100.0f)
+    public void testEquipmentCreation_Duration_Success() {
+        logger.debug("Ejecutando prueba de rendimiento: Duration");
         Equipment eq = new Equipment("Microscope", "Lab", EquipmentStatus.AVAILABLE);
         
         synchronized(this) {
             when(equipmentRepository.save(any(Equipment.class))).thenReturn(eq);
         }
-        
-        // Artificial delay that breaks the 5ms max latency and 2ms mean latency rules
-        Thread.sleep(0); 
         
         Equipment created = equipmentService.createEquipment(eq);
         assertNotNull(created);

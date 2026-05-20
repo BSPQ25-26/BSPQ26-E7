@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-
+import com.lablend.backend.repository.UserRepository;
 import com.lablend.backend.dto.OverdueLoanDTO;
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.EquipmentStatus;
@@ -24,6 +24,7 @@ public class LoanServiceImpl implements LoanService {
 
     private final LoanRepository loanRepository;
     private final EquipmentRepository equipmentRepository;
+    private final UserRepository userRepository;
 
     /**
      * Constructs the service with required repositories.
@@ -31,14 +32,21 @@ public class LoanServiceImpl implements LoanService {
      * @param loanRepository      loan data access
      * @param equipmentRepository equipment data access
      */
-    public LoanServiceImpl(LoanRepository loanRepository, EquipmentRepository equipmentRepository) {
+    public LoanServiceImpl(LoanRepository loanRepository, EquipmentRepository equipmentRepository, UserRepository userRepository) {
         this.loanRepository = loanRepository;
         this.equipmentRepository = equipmentRepository;
+        this.userRepository = userRepository;
     }
 
     /** {@inheritDoc} */
     @Override
     public Loan createLoan(Loan loan) {
+        com.lablend.backend.entity.User user = userRepository.findById(loan.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + loan.getUserId()));
+        if (user.getStatus() == com.lablend.backend.entity.UserStatus.BLOCKED) {
+            throw new IllegalStateException("User is blocked and cannot borrow equipment");
+        }
+
         long activeLoansCount = loanRepository.countByUserIdAndStatus(loan.getUserId(), LoanStatus.ACTIVE);
         
         if (activeLoansCount >= 3) {

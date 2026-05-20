@@ -6,6 +6,9 @@ import com.lablend.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.lablend.backend.entity.UserRole;
+import com.lablend.backend.entity.UserStatus;
+
 
 import java.util.List;
 import java.util.Optional;
@@ -104,6 +107,63 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> getAllUsers() {
         return userRepository.findAll();
+    }
+
+
+    /**
+     * Blocks a user by setting their status to BLOCKED.
+     *
+     * <p>Administrators cannot be blocked.</p>
+     *
+     * @param id the ID of the user to block
+     * @throws RuntimeException if no user exists with the given ID
+     * @throws IllegalStateException if the user is an administrator
+     */
+    @Override
+    public void blockUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new IllegalStateException("Administrators cannot be blocked");
+        }
+        user.setStatus(UserStatus.BLOCKED);
+        userRepository.save(user);
+    }
+
+    /**
+     * Unblocks a user by setting their status to ACTIVE.
+     *
+     * @param id the ID of the user to unblock
+     * @throws RuntimeException if no user exists with the given ID
+     */
+    @Override
+    public void unblockUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
+    }
+    /**
+     * Retrieves all users whose status is BLOCKED.
+     *
+     * @return a list of blocked users
+     */
+    @Override
+    public List<User> getBlockedUsers() {
+        return userRepository.findByStatus(UserStatus.BLOCKED);
+    }
+    /**
+     * Checks whether a user is currently blocked.
+     *
+     * @param id the ID of the user to check
+     * @return true if the user is blocked, false otherwise
+     * @throws RuntimeException if no user exists with the given ID
+     */
+    @Override
+    public boolean isUserBlocked(Long id) {
+        return userRepository.findById(id)
+                .map(u -> u.getStatus() == UserStatus.BLOCKED)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
 }
