@@ -9,54 +9,68 @@ import com.github.noconnor.junitperf.JUnitPerfTestActiveConfig;
 import com.lablend.backend.entity.User;
 import com.lablend.backend.entity.UserRole;
 import com.lablend.backend.repository.UserRepository;
-import com.lablend.backend.service.impl.UserServiceImpl;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
-@ExtendWith({MockitoExtension.class, JUnitPerfInterceptor.class})
-@MockitoSettings(strictness = Strictness.LENIENT)
+@SpringBootTest
+@ActiveProfiles("perf")
+@org.junit.jupiter.api.extension.ExtendWith(JUnitPerfInterceptor.class)
 public class UserPerformanceTest {
+
+    private static final AtomicLong SEQUENCE = new AtomicLong();
 
     @JUnitPerfTestActiveConfig
     public static final JUnitPerfReportingConfig PERF_CONFIG = JUnitPerfReportingConfig.builder()
             .reportGenerator(new HtmlReportGenerator("target/site/perf-reports/user_performance_report.html"))
             .build();
 
-    @InjectMocks
-    private UserServiceImpl userService;
+    @Autowired
+    private UserService userService;
 
-    @Mock
+    @Autowired
     private UserRepository userRepository;
 
-    @Mock
+    @Autowired
     private PasswordEncoder passwordEncoder;
+
+    private Long seededUserId;
+
+    @BeforeEach
+    void setUp() {
+        User seededUser = new User(
+                "Seed User",
+                "seed-user-" + SEQUENCE.incrementAndGet() + "@lablend.local",
+                passwordEncoder.encode("password"),
+                UserRole.USER);
+        seededUser = userRepository.save(seededUser);
+        seededUserId = seededUser.getId();
+    }
 
    
     @Test
     @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 100)
-    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, executionsPerSec = 10, meanLatency = 100.0f, maxLatency = 500.0f)
+    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, executionsPerSec = 10, meanLatency = 300.0f, maxLatency = 500.0f)
     public void testUserCreation_Throughput() {
-        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
-        
-        synchronized(this) {
-            when(passwordEncoder.encode(any(String.class))).thenReturn("encoded_pass");
-            when(userRepository.save(any(User.class))).thenReturn(user);
-        }
-        
+        long suffix = SEQUENCE.incrementAndGet();
+        User user = new User(
+                "Jorge-" + suffix,
+                "jorge-" + suffix + "@deusto.com",
+                "password",
+                UserRole.USER);
+
         User created = userService.createUser(user);
         assertNotNull(created);
+        long createdId = created.getId().longValue();
+        assertNotNull(userRepository.findById(createdId).orElseThrow());
     }
 
    
@@ -64,14 +78,7 @@ public class UserPerformanceTest {
     @JUnitPerfTest(threads = 20, durationMs = 2000, maxExecutionsPerSecond = 200)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 50.0f, maxLatency = 200.0f)
     public void testGetUserById_Throughput() {
-        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
-        user.setId(1L);
-
-        synchronized(this) {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        }
-
-        Optional<User> found = userService.getUserById(1L);
+        Optional<User> found = userService.getUserById(seededUserId);
         assertNotNull(found.orElse(null));
     }
 }
