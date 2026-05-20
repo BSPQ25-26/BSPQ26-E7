@@ -1,5 +1,6 @@
 package com.lablend.backend.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -7,9 +8,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Column;
-import com.lablend.backend.entity.UserStatus;
-import com.lablend.backend.entity.UserRole;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 /**
  * Entity representing a user in the system.
  * @version 1.0
@@ -25,15 +27,22 @@ public class User {
     private Long id;
 
     /** Name of a user */
+    @NotBlank(message = "Name is required")
+    @Size(min = 2, max = 100, message = "Name must contain between 2 and 100 characters")
     private String name;
 
     /** Email of a user */
+    @Email(message = "Email must be valid")
+    @NotBlank(message = "Email is required")
     private String email;
 
     /** Password of a user */
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, max = 100, message = "Password must contain between 6 and 100 characters")
     private String password;
 
     /** Role of a user */
+    @NotNull(message = "Role is required")
     @Enumerated(EnumType.STRING)
     private UserRole role;
 

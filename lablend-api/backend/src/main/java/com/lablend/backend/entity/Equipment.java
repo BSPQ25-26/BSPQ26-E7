@@ -8,6 +8,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Version;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Equipment entity that represents laboratory equipment and its lifecycle state.
@@ -27,12 +30,16 @@ public class Equipment {
      * Human-readable equipment name.
      */
     @Column(name = "name", nullable = false)
+    @NotBlank(message = "Equipment name is required")
+    @Size(max = 100, message = "Equipment name cannot exceed 100 characters")
     private String name;
 
     /**
      * Equipment type or category.
      */
     @Column(name = "type", nullable = false)
+    @NotBlank(message = "Equipment type is required")
+    @Size(max = 100, message = "Equipment type cannot exceed 100 characters")
     private String type;
     
     /**
@@ -40,6 +47,7 @@ public class Equipment {
      */
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
+    @NotNull(message = "Equipment status is required")
     private EquipmentStatus status;
 
     /**
