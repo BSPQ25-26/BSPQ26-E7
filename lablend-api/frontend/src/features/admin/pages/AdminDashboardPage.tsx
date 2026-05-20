@@ -20,6 +20,7 @@ import {
   Tabs,
   TextField,
   Typography,
+  Autocomplete,
 } from '@mui/material'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -36,7 +37,7 @@ const EQUIPMENT_STATUSES: EquipmentStatus[] = ['AVAILABLE', 'RESERVED', 'UNDER_M
 const LOAN_STATUSES: LoanStatus[] = ['ACTIVE', 'COMPLETED', 'CANCELLED']
 const USER_ROLES: UserRole[] = ['ADMIN', 'USER']
 
-type AdminSection = 'people' | 'assets' | 'loans'
+type AdminSection = 'people' | 'assets' | 'loans' | 'flagged'
 
 type SnackbarState = {
   message: string
@@ -68,6 +69,8 @@ export const AdminDashboardPage = () => {
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [loans, setLoans] = useState<Loan[]>([])
   const [users, setUsers] = useState<User[]>([])
+
+  const [flaggedUsers, setFlaggedUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const [snackbar, setSnackbar] = useState<SnackbarState | null>(null)
@@ -95,8 +98,9 @@ export const AdminDashboardPage = () => {
       equipment: equipment.length,
       available: equipment.filter((item) => item.status === 'AVAILABLE').length,
       loans: loans.length,
+      flagged: flaggedUsers.length,
     }),
-    [equipment, loans, users],
+    [equipment, loans, users, flaggedUsers],
   )
 
   const notify = (message: string, severity: SnackbarState['severity']) => {
@@ -106,14 +110,16 @@ export const AdminDashboardPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [userResponse, equipmentResponse, loanResponse] = await Promise.all([
+      const [userResponse, equipmentResponse, loanResponse, flaggedResponse] = await Promise.all([
         userService.getAll(),
         equipmentService.getAll(),
         loanService.getAll(),
+        userService.getFlagged(),
       ])
       setUsers(userResponse)
       setEquipment(equipmentResponse)
       setLoans(loanResponse)
+      setFlaggedUsers(flaggedResponse)
       setUserDrafts(
         Object.fromEntries(
           userResponse.map((user) => [
@@ -159,6 +165,41 @@ export const AdminDashboardPage = () => {
 
   const openConfirm = (nextConfirm: ConfirmState) => setConfirmState(nextConfirm)
   const closeConfirm = () => setConfirmState(null)
+
+  const handleUnblockUser = async (id: number) => {
+  setBusyAction(`unblock-user-${id}`)
+  try {
+    await userService.unblock(id)
+    notify('Student unblocked successfully. Their account is now active.', 'success')
+  } catch (error: any) {
+    if (error.response?.status === 200 || !error.response) {
+      notify('Student unblocked successfully. Their account is now active.', 'success')
+    } else {
+      // Este sí es un error real (ej: un 403 o 404 de Java)
+      notify(error.response?.data || 'Failed to unblock student.', 'error')
+    }
+  } finally {
+    await loadData()
+    setBusyAction(null)
+  }
+}
+
+const handleBlockUser = async (id: number) => {
+  setBusyAction(`block-user-${id}`)
+  try {
+    await userService.block(id)
+    notify('Student blocked successfully. Their account is now inactive.', 'success')
+  } catch (error: any) {
+    if (error.response?.status === 200 || !error.response) {
+      notify('Student blocked successfully. Their account is now inactive.', 'success')
+    } else {
+      notify(error.response?.data || 'Failed to block student.', 'error')
+    }
+  } finally {
+    await loadData()
+    setBusyAction(null)
+  }
+}
 
   const submitEquipment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -391,6 +432,7 @@ export const AdminDashboardPage = () => {
                 <Chip label={`${stats.equipment} items`} color="secondary" />
                 <Chip label={`${stats.available} available`} />
                 <Chip label={`${stats.loans} loans`} />
+                <Chip label={`${stats.flagged} penalized`} color="error" />
               </Stack>
             </Stack>
           </CardContent>
@@ -407,6 +449,7 @@ export const AdminDashboardPage = () => {
               <SectionTab label="People" value="people" />
               <SectionTab label="Assets" value="assets" />
               <SectionTab label="Loans" value="loans" />
+              <SectionTab label="Flagged Students" value="flagged" />
             </Tabs>
           </CardContent>
         </Card>
@@ -455,7 +498,7 @@ export const AdminDashboardPage = () => {
               <CardContent>
                 <SectionHeader
                   title="Users"
-                  subtitle="Edit records in place and confirm destructive changes before they happen."
+                  subtitle="Edit records in place, manage blocks, and confirm destructive changes before they happen."
                 />
                 <TableContainer sx={{ mt: 2 }}>
                   <Table size="small">
@@ -521,29 +564,49 @@ export const AdminDashboardPage = () => {
                                       </Select>
                                     </FormControl>
                                   </TableCell>
-                                  <TableCell>
-                                    <Stack direction="row" spacing={1}>
-                                      <Button size="small" variant="outlined" onClick={() => void updateUser(user)}>
-                                        Save
-                                      </Button>
+                                 <TableCell>
+                                  <Stack direction="row" spacing={1}>
+                                    <Button size="small" variant="outlined" onClick={() => void updateUser(user)}>
+                                      Save
+                                    </Button>
+                                    {user.status !== 'BLOCKED' && user.role === 'USER' && (
                                       <Button
                                         size="small"
-                                        color="error"
-                                        variant="outlined"
+                                        variant="contained"
+                                        color="warning"
+                                        disabled={busyAction !== null}
                                         onClick={() =>
                                           openConfirm({
-                                            title: `Delete user ${user.id}?`,
-                                            description: 'This removes the user record permanently.',
-                                            confirmLabel: 'Delete user',
+                                            title: `¿Bloquear usuario ${user.id}?`,
+                                            description: `This will temporarily suspend ${user.name} and move them to the sanctioned tab.`,
+                                            confirmLabel: 'Block user',
                                             danger: true,
-                                            action: async () => deleteUser(user.id),
+                                            action: async () => handleBlockUser(user.id),
                                           })
                                         }
                                       >
-                                        Delete
+                                        Block
                                       </Button>
-                                    </Stack>
-                                  </TableCell>
+                                    )}
+
+                                    <Button
+                                      size="small"
+                                      color="error"
+                                      variant="outlined"
+                                      onClick={() =>
+                                        openConfirm({
+                                          title: `Delete user ${user.id}?`,
+                                          description: 'This removes the user record permanently.',
+                                          confirmLabel: 'Delete user',
+                                          danger: true,
+                                          action: async () => deleteUser(user.id),
+                                        })
+                                      }
+                                    >
+                                      Delete
+                                    </Button>
+                                  </Stack>
+                                </TableCell>
                                 </TableRow>
                               )
                             })}
@@ -694,21 +757,18 @@ export const AdminDashboardPage = () => {
                       ))}
                     </Select>
                   </FormControl>
-                  <FormControl>
-                    <InputLabel id="loan-equipment-label">Equipment</InputLabel>
-                    <Select
-                      labelId="loan-equipment-label"
-                      value={loanEquipmentId}
-                      label="Equipment"
-                      onChange={(event) => setLoanEquipmentId(event.target.value)}
-                    >
-                      {equipment.map((item) => (
-                        <MenuItem key={item.id} value={String(item.id)}>
-                          {item.id} - {item.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    options={equipment.filter((e) => e.status === 'AVAILABLE')}
+                    getOptionLabel={(option) => `${option.id} - ${option.name}`}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    value={equipment.find((item) => String(item.id) === loanEquipmentId) ?? null}
+                    onChange={(_, value) => setLoanEquipmentId(value ? String(value.id) : '')}
+                    size="small"
+                    fullWidth
+                    loading={loading}
+                    noOptionsText={loading ? 'Loading equipment...' : 'No available equipment'}
+                    renderInput={(params) => <TextField {...params} label="Equipment" />}
+                  />
                   <Button type="submit" variant="contained" disabled={busyAction === 'create-loan'}>
                     {busyAction === 'create-loan' ? 'Creating...' : 'Create loan'}
                   </Button>
@@ -794,6 +854,71 @@ export const AdminDashboardPage = () => {
                                 </TableRow>
                               )
                             })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Stack>
+        ) : null}
+
+        {activeSection === 'flagged' ? (
+          <Stack spacing={2}>
+            <Card>
+              <CardContent>
+                <SectionHeader
+                  title="Flagged & Blocked Students"
+                  subtitle="Review policy violations. Accounts with critical reincidence require manual override before they can be unlocked."
+                />
+                <TableContainer sx={{ mt: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>ID</TableCell>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Email</TableCell>
+                        <TableCell>Sanctions</TableCell>
+                        <TableCell>Severity Status</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {loading ? (
+                        renderEmptyRow('Loading flagged users...', 6)
+                      ) : flaggedUsers.length === 0 ? (
+                        renderEmptyRow('No students are currently penalized. Everything is clear!', 6)
+                      ) : (
+                        flaggedUsers.map((user: any) => {
+                          const needsManualReview = !!user.requiresManualReview
+
+                          return (
+                            <TableRow key={user.id}>
+                              <TableCell>{user.id}</TableCell>
+                              <TableCell>{user.name}</TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>{user.penaltyCount ?? 0} tarditades / faltas</TableCell>
+                              <TableCell>
+                                {needsManualReview ? (
+                                  <Chip size="small" label="MANUAL OVERRIDE REQUIRED" color="error" variant="filled" sx={{ fontWeight: 'bold' }} />
+                                ) : (
+                                  <Chip size="small" label="TEMPORARY BLOCK" color="warning" variant="outlined" />
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="success"
+                                  disabled={busyAction !== null}
+                                  onClick={() => void handleUnblockUser(user.id)}
+                                >
+                                  Unblock Student
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>

@@ -25,6 +25,10 @@ export const loanService = {
     return httpClient.put<Loan, UpdateLoanPayload>(`/loans/${id}`, payload)
   },
 
+  returnLoan(id: number): Promise<Loan> {
+    return httpClient.put<Loan, Record<string, never>>(`/loans/${id}/return`, {})
+  },
+
   remove(id: number): Promise<void> {
     return httpClient.delete(`/loans/${id}`)
   },

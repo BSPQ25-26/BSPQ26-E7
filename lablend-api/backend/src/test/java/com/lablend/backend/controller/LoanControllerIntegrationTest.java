@@ -11,18 +11,17 @@ import com.lablend.backend.repository.UserRepository;
 import com.lablend.backend.auth.dto.LoginRequest;
 import com.lablend.backend.auth.dto.LoginResponse;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -35,53 +34,49 @@ import static org.mockito.Mockito.when;
 )
 class LoanControllerIntegrationTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(LoanControllerIntegrationTest.class);
+
     @Autowired
     private TestRestTemplate restTemplate;
 
-    @MockBean
+    @Autowired
     private UserRepository userRepository;
 
-    @MockBean
+    @Autowired
     private EquipmentRepository equipmentRepository;
 
-    @MockBean
+    @Autowired
     private LoanRepository loanRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @AfterEach
+    void tearDown() {
+        loanRepository.deleteAll();
+        equipmentRepository.deleteAll();
+        userRepository.deleteAll();
+    }
+
     @Test
     void testRemoteCreateAndGetLoan() {
+        logger.info("Iniciando test de integracion: Crear y obtener prestamo de forma remota");
+
+        logger.debug("Preparando datos de prueba: Usuario Admin y Equipo...");
         User adminUser = new User();
-        adminUser.setId(1L);
         adminUser.setName("Admin Loan");
         adminUser.setEmail("admin.loan@lablend.com");
         adminUser.setPassword(passwordEncoder.encode("admin"));
         adminUser.setRole(UserRole.ADMIN);
-        
-        when(userRepository.findByName("Admin Loan")).thenReturn(Optional.of(adminUser));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(adminUser));
+        User savedAdmin = userRepository.save(adminUser);
 
         Equipment equipment = new Equipment();
-        equipment.setId(2L);
         equipment.setName("Telescope");
         equipment.setType("Optical");
         equipment.setStatus(EquipmentStatus.AVAILABLE);
-        
-        when(equipmentRepository.findById(2L)).thenReturn(Optional.of(equipment));
+        Equipment savedEquipment = equipmentRepository.save(equipment);
 
-        when(loanRepository.save(any(Loan.class))).thenAnswer(i -> {
-            Loan l = i.getArgument(0);
-            if(l.getId() == null) l.setId(3L);
-            return l;
-        });
-        
-        Loan returnedLoan = new Loan();
-        returnedLoan.setId(3L);
-        returnedLoan.setUserId(1L);
-        returnedLoan.setEquipmentId(2L);
-        when(loanRepository.findById(3L)).thenReturn(Optional.of(returnedLoan));
-
+        logger.info("Autenticando usuario y obteniendo token JWT...");
         LoginRequest loginRequest = new LoginRequest("Admin Loan", "admin.loan@lablend.com", "admin");
         ResponseEntity<LoginResponse> loginResponse = 
             restTemplate.postForEntity("/api/auth/login", loginRequest, LoginResponse.class);
@@ -93,34 +88,37 @@ class LoanControllerIntegrationTest {
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        String newLoanJson = """
+        String newLoanJson = String.format("""
             {
-                "userId": 1,
-                "equipmentId": 2
+                "userId": %d,
+                "equipmentId": %d
             }
-            """;
+            """, savedAdmin.getId(), savedEquipment.getId());
             
         HttpEntity<String> createRequestEntity = new HttpEntity<>(newLoanJson, headers);
 
+        logger.debug("Enviando peticion POST a /api/loans para crear el prestamo...");
         ResponseEntity<Loan> createResponse =
             restTemplate.exchange("/api/loans", HttpMethod.POST, createRequestEntity, Loan.class);
 
         assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
         assertNotNull(createResponse.getBody());
         Long newLoanId = createResponse.getBody().getId();
+        logger.info("Prestamo creado con exito. ID generado: {}", newLoanId);
+        
         HttpEntity<Void> getRequestEntity = new HttpEntity<>(headers);
         
+        logger.debug("Verificando la obtencion del prestamo recien creado mediante GET...");
         ResponseEntity<Loan> getResponse =
             restTemplate.exchange("/api/loans/" + newLoanId, HttpMethod.GET, getRequestEntity, Loan.class);
 
         assertEquals(HttpStatus.OK, getResponse.getStatusCode());
-        assertEquals(1L, getResponse.getBody().getUserId());
-        assertEquals(2L, getResponse.getBody().getEquipmentId());
+        assertEquals(savedAdmin.getId(), getResponse.getBody().getUserId());
+        assertEquals(savedEquipment.getId(), getResponse.getBody().getEquipmentId());
         
-        when(equipmentRepository.findById(2L)).thenReturn(Optional.of(equipment));
-        Equipment updatedEquipment = equipmentRepository.findById(2L).orElseThrow();
-        // Since we are mocking, it won't actually update in the mock unless we mock save.
-        // In the real DB it is updated. For a mock test, this just asserts what the mock returns.
-        // We'll leave it to just verify the object we have.
+        Equipment updatedEquipment = equipmentRepository.findById(savedEquipment.getId()).orElseThrow();
+        assertEquals(EquipmentStatus.RESERVED, updatedEquipment.getStatus());
+        
+        logger.info("Test de integracion de prestamos finalizado correctamente. El estado del equipo es RESERVED.");
     }
 }

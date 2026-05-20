@@ -15,32 +15,22 @@ import com.lablend.backend.entity.UserRole;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
 import com.lablend.backend.repository.UserRepository;
-import com.lablend.backend.controller.LoanController;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
-
-import org.springframework.http.ResponseEntity;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@ExtendWith(JUnitPerfInterceptor.class)
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {
-        "spring.datasource.url=jdbc:h2:mem:testdb-perf",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-        "spring.jpa.hibernate.ddl-auto=create-drop"
-    }
-)
+@SpringBootTest
+@ActiveProfiles("perf")
+@org.junit.jupiter.api.extension.ExtendWith(JUnitPerfInterceptor.class)
 public class LoanPerformanceTest {
+
+    private static final AtomicLong SEQUENCE = new AtomicLong();
 
     @JUnitPerfTestActiveConfig
     public static final JUnitPerfReportingConfig PERF_CONFIG = JUnitPerfReportingConfig.builder()
@@ -51,9 +41,6 @@ public class LoanPerformanceTest {
     private LoanService loanService;
 
     @Autowired
-    private LoanController loanController;
-
-    @Autowired
     private LoanRepository loanRepository;
 
     @Autowired
@@ -62,48 +49,29 @@ public class LoanPerformanceTest {
     @Autowired
     private UserRepository userRepository;
 
-    @AfterEach
-    void tearDown() {
-        try {
-            loanRepository.deleteAll();
-            equipmentRepository.deleteAll();
-            userRepository.deleteAll();
-        } catch (Exception e) {
-            // Ignore concurrent deletion issues
-        }
-    }
     
     @Test
     @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 50)
-    @JUnitPerfTestRequirement(allowedErrorPercentage = 10, meanLatency = 2000.0f, maxLatency = 5000.0f)
+    @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 150.0f, maxLatency = 600.0f)
     public void testLoanCreation_Throughput() {
-        String uniqueEmail = "jorge." + UUID.randomUUID().toString() + "@deusto.com";
-        User user = new User("Jorge", uniqueEmail, "password", UserRole.USER);
-        User savedUser = userRepository.save(user);
+        long suffix = SEQUENCE.incrementAndGet();
+        User user = userRepository.save(new User(
+                "Jorge-" + suffix,
+                "jorge-loan-" + suffix + "@deusto.com",
+                "password",
+                UserRole.USER));
 
-        Equipment equipment = new Equipment("Microscope", "Optical", EquipmentStatus.AVAILABLE);
-        Equipment savedEquipment = equipmentRepository.save(equipment);
+        Equipment equipment = equipmentRepository.save(new Equipment(
+                "Microscope-" + suffix,
+                "Optical-" + suffix,
+                EquipmentStatus.AVAILABLE));
 
-        Loan loan = new Loan(savedUser.getId(), savedEquipment.getId(), LocalDateTime.now(), LoanStatus.ACTIVE);
-
+        Loan loan = new Loan(user.getId(), equipment.getId(), LocalDateTime.now(), LoanStatus.ACTIVE);
         Loan created = loanService.createLoan(loan);
         assertNotNull(created);
-    }
-
-    @Test
-    @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 50)
-    @JUnitPerfTestRequirement(allowedErrorPercentage = 10, meanLatency = 2000.0f, maxLatency = 5000.0f)
-    public void testLoanController_CreateLoan_Throughput() {
-        String uniqueEmail = "jorge.controller." + UUID.randomUUID().toString() + "@deusto.com";
-        User user = new User("Jorge", uniqueEmail, "password", UserRole.USER);
-        User savedUser = userRepository.save(user);
-
-        Equipment equipment = new Equipment("Microscope Controller", "Optical", EquipmentStatus.AVAILABLE);
-        Equipment savedEquipment = equipmentRepository.save(equipment);
-
-        Loan loan = new Loan(savedUser.getId(), savedEquipment.getId(), LocalDateTime.now(), LoanStatus.ACTIVE);
-
-        ResponseEntity<?> response = loanController.createLoan(loan);
-        assertNotNull(response);
+                long createdLoanId = created.getId().longValue();
+                long equipmentId = equipment.getId().longValue();
+                assertNotNull(loanRepository.findById(createdLoanId).orElseThrow());
+                assertNotNull(equipmentRepository.findById(equipmentId).orElseThrow());
     }
 }

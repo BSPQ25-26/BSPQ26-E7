@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import com.lablend.backend.entity.UserStatus;
 
 import java.util.Arrays;
 import java.util.List;
@@ -104,5 +105,57 @@ public class UserServiceTest {
         assertThrows(RuntimeException.class, () -> {
             userService.deleteUser(99L);
         });
+    }
+
+    @Test
+    public void testBlockUser_Success() {
+        user.setRole(UserRole.USER);
+        user.setStatus(UserStatus.ACTIVE);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenReturn(user);
+
+        userService.blockUser(1L);
+
+        assertEquals(UserStatus.BLOCKED, user.getStatus());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    public void testBlockUser_AdminShouldThrow() {
+        user.setRole(UserRole.ADMIN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThrows(IllegalStateException.class, () -> userService.blockUser(1L));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    public void testBlockUser_NotFound() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(RuntimeException.class, () -> userService.blockUser(99L));
+    }
+
+    @Test
+    public void testUnblockUser_Success() {
+        user.setStatus(UserStatus.BLOCKED);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenReturn(user);
+
+        userService.unblockUser(1L);
+
+        assertEquals(UserStatus.ACTIVE, user.getStatus());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    public void testGetBlockedUsers() {
+        user.setStatus(UserStatus.BLOCKED);
+        when(userRepository.findByStatus(UserStatus.BLOCKED)).thenReturn(List.of(user));
+
+        List<User> blocked = userService.getBlockedUsers();
+
+        assertEquals(1, blocked.size());
+        assertEquals(UserStatus.BLOCKED, blocked.get(0).getStatus());
+        verify(userRepository).findByStatus(UserStatus.BLOCKED);
     }
 }
