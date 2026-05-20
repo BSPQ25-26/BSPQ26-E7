@@ -69,14 +69,8 @@ public class LoanController {
         @ApiResponse(responseCode = "409", description = "Conflict: Target equipment item is already reserved or active in another loan session")
     })
     public ResponseEntity<?> createLoan(@RequestBody Loan loan) {
-        try {
-            Loan createdLoan = loanService.createLoan(loan);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdLoan);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        Loan createdLoan = loanService.createLoan(loan);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdLoan);
     }
 
     /**
@@ -93,12 +87,8 @@ public class LoanController {
         @ApiResponse(responseCode = "404", description = "Target loan document ID match not found")
     })
     public ResponseEntity<Loan> updateLoan(@PathVariable Long id, @RequestBody Loan loan) {
-        try {
-            Loan updatedLoan = loanService.updateLoan(id, loan);
-            return ResponseEntity.ok(updatedLoan);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        Loan updatedLoan = loanService.updateLoan(id, loan);
+        return ResponseEntity.ok(updatedLoan);
     }
 
     /**
@@ -114,12 +104,8 @@ public class LoanController {
         @ApiResponse(responseCode = "404", description = "No tracking context exists for target reference")
     })
     public ResponseEntity<Void> deleteLoan(@PathVariable Long id) {
-        try {
-            loanService.deleteLoan(id);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        loanService.deleteLoan(id);
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -135,12 +121,8 @@ public class LoanController {
         @ApiResponse(responseCode = "404", description = "Loan entity not matched")
     })
     public ResponseEntity<?> returnLoan(@PathVariable Long id) {
-        try {
-            Loan completedLoan = loanService.returnLoan(id);
-            return ResponseEntity.ok(completedLoan);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
+        Loan completedLoan = loanService.returnLoan(id);
+        return ResponseEntity.ok(completedLoan);
     }
 
     /**
@@ -157,14 +139,8 @@ public class LoanController {
         @ApiResponse(responseCode = "404", description = "Loan key references not matched")
     })
     public ResponseEntity<?> extendLoan(@PathVariable Long id) {
-        try {
-            Loan extendedLoan = loanService.extendLoan(id);
-            return ResponseEntity.ok(extendedLoan);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
+        Loan extendedLoan = loanService.extendLoan(id);
+        return ResponseEntity.ok(extendedLoan);
     }
 
     /**

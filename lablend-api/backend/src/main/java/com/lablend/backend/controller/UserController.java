@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,12 +40,8 @@ public class UserController {
         @ApiResponse(responseCode = "400", description = "Bad Request: Target criteria validation constraint breach or syntax errors in metadata payload")
     })
     public ResponseEntity<?> createUser(@RequestBody User user) {
-        try {
-            User createdUser = userService.createUser(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        User createdUser = userService.createUser(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
      /**
      * Updates an existing user by ID.
@@ -59,12 +56,8 @@ public class UserController {
         @ApiResponse(responseCode = "404", description = "Target resource ID context reference not matched")
     })
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User user) {
-        try {
-            User updatedUser = userService.updateUser(id, user);
-            return ResponseEntity.ok(updatedUser);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        User updatedUser = userService.updateUser(id, user);
+        return ResponseEntity.ok(updatedUser);
     }
     /**
      * Deletes a user by ID.
@@ -78,12 +71,8 @@ public class UserController {
         @ApiResponse(responseCode = "404", description = "Target context identity reference key not found")
     })
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        try {
-            userService.deleteUser(id);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
     /**
      * Retrieves all blocked users.
@@ -140,14 +129,8 @@ public class UserController {
         @ApiResponse(responseCode = "404", description = "User target reference mapping keys not found")
     })
     public ResponseEntity<?> blockUser(@PathVariable Long id) {
-        try {
-            userService.blockUser(id);
-            return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        userService.blockUser(id);
+        return ResponseEntity.ok().build();
     }
 
 
@@ -166,20 +149,17 @@ public class UserController {
         @ApiResponse(responseCode = "404", description = "User database structural link match not found")
     })
     public ResponseEntity<?> unblockUser(@PathVariable Long id) {
-        try {
-            User user = userService.getUserById(id)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-            
-            if (user.isRequiresManualReview()) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Account requires a manual administrative override review before unblocking.");
-            }
+        User user = userService.getUserById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-            userService.unblockUser(id);
-            return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+        if (user.isRequiresManualReview()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Account requires a manual administrative override review before unblocking.");
         }
+
+        userService.unblockUser(id);
+        return ResponseEntity.ok().build();
     }
 
     /**

@@ -164,8 +164,10 @@ class EquipmentControllerTest {
                 .thenThrow(new IllegalStateException("Solo se puede reservar equipo disponible."));
 
         mockMvc.perform(put("/api/equipment/1/reserve"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Solo se puede reservar equipo disponible."));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("Solo se puede reservar equipo disponible."))
+                .andExpect(jsonPath("$.path").value("/api/equipment/1/reserve"));
     }
 
     @Test
@@ -173,6 +175,19 @@ class EquipmentControllerTest {
         when(equipmentService.reserveEquipment(1L)).thenThrow(new RuntimeException("Not found"));
 
         mockMvc.perform(put("/api/equipment/1/reserve"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"));
+    }
+
+    @Test
+    void testGetAllEquipmentInvalidPagination_ReturnsValidationError() throws Exception {
+        mockMvc.perform(get("/api/equipment")
+                .param("page", "-1")
+                .param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.validationErrors").exists());
     }
 }
