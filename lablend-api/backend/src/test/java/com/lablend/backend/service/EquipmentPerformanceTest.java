@@ -9,36 +9,34 @@ import com.github.noconnor.junitperf.JUnitPerfTestActiveConfig;
 import com.lablend.backend.entity.Equipment;
 import com.lablend.backend.entity.EquipmentStatus;
 import com.lablend.backend.repository.EquipmentRepository;
-import com.lablend.backend.service.impl.EquipmentServiceImpl;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import java.util.concurrent.atomic.AtomicLong;
 
-@ExtendWith({MockitoExtension.class, JUnitPerfInterceptor.class})
-@MockitoSettings(strictness = Strictness.LENIENT)
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+@SpringBootTest
+@ActiveProfiles("perf")
+@org.junit.jupiter.api.extension.ExtendWith(JUnitPerfInterceptor.class)
 public class EquipmentPerformanceTest {
 
     private static final Logger logger = LoggerFactory.getLogger(EquipmentPerformanceTest.class);
+    private static final AtomicLong SEQUENCE = new AtomicLong();
 
     @JUnitPerfTestActiveConfig
     public static final JUnitPerfReportingConfig PERF_CONFIG = JUnitPerfReportingConfig.builder()
             .reportGenerator(new HtmlReportGenerator("target/site/perf-reports/performance_report.html"))
             .build();
 
-    @InjectMocks
-    private EquipmentServiceImpl equipmentService;
+    @Autowired
+    private EquipmentService equipmentService;
 
-    @Mock
+    @Autowired
     private EquipmentRepository equipmentRepository;
 
     @Test
@@ -46,14 +44,13 @@ public class EquipmentPerformanceTest {
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, executionsPerSec = 10, meanLatency = 100.0f, maxLatency = 500.0f)
     public void testEquipmentCreation_Throughput_Success() {
         logger.debug("Ejecutando prueba de rendimiento: Throughput");
-        Equipment eq = new Equipment("Oscilloscope", "Lab", EquipmentStatus.AVAILABLE);
-        
-        synchronized(this) {
-            when(equipmentRepository.save(any(Equipment.class))).thenReturn(eq);
-        }
-        
+        long suffix = SEQUENCE.incrementAndGet();
+        Equipment eq = new Equipment("Oscilloscope-" + suffix, "Lab-" + suffix, EquipmentStatus.AVAILABLE);
+
         Equipment created = equipmentService.createEquipment(eq);
         assertNotNull(created);
+        long createdId = created.getId().longValue();
+        assertNotNull(equipmentRepository.findById(createdId).orElseThrow());
     }
 
     @Test
@@ -61,13 +58,12 @@ public class EquipmentPerformanceTest {
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, maxLatency = 200.0f, meanLatency = 100.0f)
     public void testEquipmentCreation_Duration_Success() {
         logger.debug("Ejecutando prueba de rendimiento: Duration");
-        Equipment eq = new Equipment("Microscope", "Lab", EquipmentStatus.AVAILABLE);
-        
-        synchronized(this) {
-            when(equipmentRepository.save(any(Equipment.class))).thenReturn(eq);
-        }
-        
+        long suffix = SEQUENCE.incrementAndGet();
+        Equipment eq = new Equipment("Microscope-" + suffix, "Lab-" + suffix, EquipmentStatus.AVAILABLE);
+
         Equipment created = equipmentService.createEquipment(eq);
         assertNotNull(created);
+        long createdId = created.getId().longValue();
+        assertNotNull(equipmentRepository.findById(createdId).orElseThrow());
     }
 }

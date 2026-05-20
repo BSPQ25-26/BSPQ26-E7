@@ -3,14 +3,11 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Container,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   Typography,
+  Autocomplete,
+  TextField,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { equipmentService } from '../../../services/equipmentService'
@@ -23,7 +20,7 @@ import { SectionHeader } from '../../../shared/ui/SectionHeader'
 export const UserDashboardPage = () => {
   const { session, logout } = useAuth()
   const [equipment, setEquipment] = useState<Equipment[]>([])
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState('')
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const [snackbar, setSnackbar] = useState<{
     message: string
@@ -40,6 +37,12 @@ export const UserDashboardPage = () => {
       try {
         const response = await equipmentService.getAll()
         setEquipment(response)
+        const available = response.filter((item) => item.status === 'AVAILABLE')
+        if (available.length > 0) {
+          setSelectedEquipmentId(String(available[0].id))
+        } else {
+          setSelectedEquipmentId(null)
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to load equipment.'
         setSnackbar({ message, severity: 'error' })
@@ -49,11 +52,6 @@ export const UserDashboardPage = () => {
     void loadEquipment()
   }, [])
 
-  useEffect(() => {
-    if (!selectedEquipmentId && availableEquipment.length > 0) {
-      setSelectedEquipmentId(String(availableEquipment[0].id))
-    }
-  }, [availableEquipment, selectedEquipmentId])
 
   const submitLoan = async () => {
     if (!session) {
@@ -114,21 +112,17 @@ export const UserDashboardPage = () => {
                 </Card>
               ) : (
                 <>
-                  <FormControl fullWidth>
-                    <InputLabel id="equipment-loan-select">Available equipment</InputLabel>
-                    <Select
-                      labelId="equipment-loan-select"
-                      label="Available equipment"
-                      value={selectedEquipmentId}
-                      onChange={(event) => setSelectedEquipmentId(event.target.value)}
-                    >
-                      {availableEquipment.map((item) => (
-                        <MenuItem value={String(item.id)} key={item.id}>
-                          {item.name} <Chip size="small" label={item.type} sx={{ ml: 1 }} />
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    options={availableEquipment}
+                    getOptionLabel={(option) => `${option.id} - ${option.name}`}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    value={availableEquipment.find((item) => String(item.id) === selectedEquipmentId) ?? null}
+                    onChange={(_, value) => setSelectedEquipmentId(value ? String(value.id) : '')}
+                    size="small"
+                    fullWidth
+                    noOptionsText="No available equipment"
+                    renderInput={(params) => <TextField {...params} label="Available equipment" />}
+                  />
                   <Button
                     variant="contained"
                     onClick={() => void submitLoan()}

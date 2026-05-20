@@ -15,41 +15,38 @@ import com.lablend.backend.entity.UserRole;
 import com.lablend.backend.repository.EquipmentRepository;
 import com.lablend.backend.repository.LoanRepository;
 import com.lablend.backend.repository.UserRepository;
-import com.lablend.backend.service.impl.LoanServiceImpl;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
-@ExtendWith({MockitoExtension.class, JUnitPerfInterceptor.class})
-@MockitoSettings(strictness = Strictness.LENIENT)
+@SpringBootTest
+@ActiveProfiles("perf")
+@org.junit.jupiter.api.extension.ExtendWith(JUnitPerfInterceptor.class)
 public class LoanPerformanceTest {
+
+    private static final AtomicLong SEQUENCE = new AtomicLong();
 
     @JUnitPerfTestActiveConfig
     public static final JUnitPerfReportingConfig PERF_CONFIG = JUnitPerfReportingConfig.builder()
             .reportGenerator(new HtmlReportGenerator("target/site/perf-reports/loan_performance_report.html"))
             .build();
 
-    @InjectMocks
-    private LoanServiceImpl loanService;
+    @Autowired
+    private LoanService loanService;
 
-    @Mock
+    @Autowired
     private LoanRepository loanRepository;
 
-    @Mock
+    @Autowired
     private EquipmentRepository equipmentRepository;
 
-    @Mock
+    @Autowired
     private UserRepository userRepository;
 
     
@@ -57,22 +54,24 @@ public class LoanPerformanceTest {
     @JUnitPerfTest(threads = 10, durationMs = 2000, maxExecutionsPerSecond = 50)
     @JUnitPerfTestRequirement(allowedErrorPercentage = 0, meanLatency = 150.0f, maxLatency = 600.0f)
     public void testLoanCreation_Throughput() {
-        User user = new User("Jorge", "jorge@deusto.com", "password", UserRole.USER);
-        user.setId(1L);
+        long suffix = SEQUENCE.incrementAndGet();
+        User user = userRepository.save(new User(
+                "Jorge-" + suffix,
+                "jorge-loan-" + suffix + "@deusto.com",
+                "password",
+                UserRole.USER));
 
-        Equipment equipment = new Equipment("Microscope", "Optical", EquipmentStatus.AVAILABLE);
-        equipment.setId(2L);
+        Equipment equipment = equipmentRepository.save(new Equipment(
+                "Microscope-" + suffix,
+                "Optical-" + suffix,
+                EquipmentStatus.AVAILABLE));
 
-        Loan loan = new Loan(1L, 2L, LocalDateTime.now(), LoanStatus.ACTIVE);
-
-        synchronized(this) {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-            when(loanRepository.countByUserIdAndStatus(1L, LoanStatus.ACTIVE)).thenReturn(0L);
-            when(equipmentRepository.findById(2L)).thenReturn(Optional.of(equipment));
-            when(loanRepository.save(any(Loan.class))).thenReturn(loan);
-        }
-
+        Loan loan = new Loan(user.getId(), equipment.getId(), LocalDateTime.now(), LoanStatus.ACTIVE);
         Loan created = loanService.createLoan(loan);
         assertNotNull(created);
+                long createdLoanId = created.getId().longValue();
+                long equipmentId = equipment.getId().longValue();
+                assertNotNull(loanRepository.findById(createdLoanId).orElseThrow());
+                assertNotNull(equipmentRepository.findById(equipmentId).orElseThrow());
     }
 }

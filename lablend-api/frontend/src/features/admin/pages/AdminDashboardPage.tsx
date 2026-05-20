@@ -20,6 +20,7 @@ import {
   Tabs,
   TextField,
   Typography,
+  Autocomplete,
 } from '@mui/material'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -756,21 +757,18 @@ const handleBlockUser = async (id: number) => {
                       ))}
                     </Select>
                   </FormControl>
-                  <FormControl>
-                    <InputLabel id="loan-equipment-label">Equipment</InputLabel>
-                    <Select
-                      labelId="loan-equipment-label"
-                      value={loanEquipmentId}
-                      label="Equipment"
-                      onChange={(event) => setLoanEquipmentId(event.target.value)}
-                    >
-                      {equipment.map((item) => (
-                        <MenuItem key={item.id} value={String(item.id)}>
-                          {item.id} - {item.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    options={equipment.filter((e) => e.status === 'AVAILABLE')}
+                    getOptionLabel={(option) => `${option.id} - ${option.name}`}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    value={equipment.find((item) => String(item.id) === loanEquipmentId) ?? null}
+                    onChange={(_, value) => setLoanEquipmentId(value ? String(value.id) : '')}
+                    size="small"
+                    fullWidth
+                    loading={loading}
+                    noOptionsText={loading ? 'Loading equipment...' : 'No available equipment'}
+                    renderInput={(params) => <TextField {...params} label="Equipment" />}
+                  />
                   <Button type="submit" variant="contained" disabled={busyAction === 'create-loan'}>
                     {busyAction === 'create-loan' ? 'Creating...' : 'Create loan'}
                   </Button>
