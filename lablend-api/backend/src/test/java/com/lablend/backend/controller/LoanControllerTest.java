@@ -105,7 +105,8 @@ class LoanControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testLoan)))
                 .andExpect(status().isConflict())
-                .andExpect(content().string("User limit reached"));
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("User limit reached"));
     }
 
     @Test
@@ -116,7 +117,8 @@ class LoanControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testLoan)))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("Equipment unavailable"));
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Equipment unavailable"));
     }
 
     @Test
@@ -227,6 +229,7 @@ class LoanControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testLoan)))
                 .andExpect(status().isConflict())
-                .andExpect(content().string("User is blocked and cannot borrow equipment"));
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("User is blocked and cannot borrow equipment"));
     }
 }

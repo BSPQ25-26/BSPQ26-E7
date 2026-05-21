@@ -16,8 +16,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 
-import java.util.List;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 /**
  * REST controller for {@link Equipment} management operations.
@@ -25,6 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/equipment")
 @Tag(name = "Equipment Management", description = "Endpoints for managing laboratory equipment inventory, tracking availability states, and reservations.")
+@Validated
 public class EquipmentController {
 
     @Autowired
@@ -128,14 +131,8 @@ public class EquipmentController {
         @ApiResponse(responseCode = "404", description = "Equipment not found")
     })
     public ResponseEntity<?> reserveEquipment(@PathVariable Long id) {
-        try {
-            Equipment reserved = equipmentService.reserveEquipment(id);
-            return ResponseEntity.ok(reserved);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        Equipment reserved = equipmentService.reserveEquipment(id);
+        return ResponseEntity.ok(reserved);
     }
 
     /**
@@ -151,8 +148,8 @@ public class EquipmentController {
     @Operation(summary = "Get paginated list of equipment", description = "Fetches a slice of the equipment table. Supports zero-based offset page indexing and custom page sizing elements.")
     @ApiResponse(responseCode = "200", description = "Successfully pulled paginated chunk of items from database context")
     public Page<Equipment> getAll(
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int size
+        @RequestParam(defaultValue = "0") @Min(value = 0, message = "Page index must be zero or greater") int page,
+        @RequestParam(defaultValue = "10") @Min(value = 1, message = "Page size must be at least 1") @Max(value = 100, message = "Page size cannot exceed 100") int size
     ) {
         return equipmentService.getAllEquipmentPaged(PageRequest.of(page, size));
     }

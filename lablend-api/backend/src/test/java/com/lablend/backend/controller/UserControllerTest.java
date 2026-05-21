@@ -122,7 +122,8 @@ class UserControllerTest {
                         }
                         """))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("Email already exists"));
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Email already exists"));
     }
 
     @Test
@@ -173,7 +174,8 @@ class UserControllerTest {
 
         mockMvc.perform(put("/api/users/1/block"))
                 .andExpect(status().isConflict())
-                .andExpect(content().string("Administrators cannot be blocked"));
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("Administrators cannot be blocked"));
     }
 
     @Test
@@ -241,6 +243,7 @@ class UserControllerTest {
                 .andDo(print())
                 // Verificamos que devuelva 403 Forbidden debido al bloqueo por reincidencia
                 .andExpect(status().isForbidden())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Account requires a manual administrative override review")));
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Account requires a manual administrative override review")));
     }
 }

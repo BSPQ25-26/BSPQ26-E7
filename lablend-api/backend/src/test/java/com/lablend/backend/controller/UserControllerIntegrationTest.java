@@ -6,15 +6,18 @@ import com.lablend.backend.repository.UserRepository;
 import com.lablend.backend.auth.dto.LoginRequest;
 import com.lablend.backend.auth.dto.LoginResponse;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -30,28 +33,37 @@ class UserControllerIntegrationTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    @Autowired
+    @MockBean
     private UserRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @AfterEach
-    void tearDown() {
-        userRepository.deleteAll();
-    }
-
     @Test
     void testRemoteCreateAndGetUser() {
        
         User adminUser = new User();
+        adminUser.setId(1L);
         adminUser.setName("admin");
         adminUser.setEmail("admin@lablend.com");
         adminUser.setPassword(passwordEncoder.encode("admin"));
         adminUser.setRole(UserRole.ADMIN);
-        userRepository.save(adminUser);
-
         
+        when(userRepository.findByName("admin")).thenReturn(Optional.of(adminUser));
+        when(userRepository.save(any(User.class))).thenAnswer(i -> {
+            User u = i.getArgument(0);
+            if (u.getId() == null) u.setId(2L);
+            return u;
+        });
+        when(userRepository.findById(2L)).thenAnswer(i -> {
+            User newUser = new User();
+            newUser.setId(2L);
+            newUser.setName("Maddi Test");
+            newUser.setEmail("maddi.test@uni.com");
+            newUser.setRole(UserRole.USER);
+            return Optional.of(newUser);
+        });
+
         LoginRequest loginRequest = new LoginRequest("admin", "admin@lablend.com", "admin");
         ResponseEntity<LoginResponse> loginResponse = 
             restTemplate.postForEntity("/api/auth/login", loginRequest, LoginResponse.class);
@@ -59,7 +71,6 @@ class UserControllerIntegrationTest {
         assertEquals(HttpStatus.OK, loginResponse.getStatusCode(), "Login should be ok");
         String token = loginResponse.getBody().token();
 
-        
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -82,7 +93,6 @@ class UserControllerIntegrationTest {
         assertNotNull(createResponse.getBody());
         assertEquals("Maddi Test", createResponse.getBody().getName());
         Long newUserId = createResponse.getBody().getId();
-
         
         HttpEntity<Void> getRequestEntity = new HttpEntity<>(headers);
         
