@@ -126,6 +126,10 @@ public class LoanServiceImpl implements LoanService {
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
 
+        if (loan.getStatus() != LoanStatus.ACTIVE) {
+            throw new IllegalStateException("Loan is already completed or cancelled");
+        }
+
         loan.setStatus(LoanStatus.COMPLETED);
 
         updateEquipmentStatus(loan.getEquipmentId(), EquipmentStatus.AVAILABLE);
