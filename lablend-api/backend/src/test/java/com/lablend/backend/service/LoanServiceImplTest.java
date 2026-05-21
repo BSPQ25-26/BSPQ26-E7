@@ -364,4 +364,38 @@ class LoanServiceImplTest {
         verify(loanRepository, never()).save(any(Loan.class));
         verify(equipmentRepository, never()).findById(any());
     }
+
+@Test
+    void returnLoan_WhenAlreadyCompleted_ShouldThrowException() {
+        Loan loan = new Loan();
+        loan.setId(1L);
+        loan.setEquipmentId(10L);
+        loan.setStatus(LoanStatus.COMPLETED);
+
+        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            loanService.returnLoan(1L);
+        });
+
+        assertTrue(exception.getMessage().contains("already completed"));
+        verify(loanRepository, never()).save(any(Loan.class));
+    }
+
+    @Test
+    void returnLoan_WhenCancelled_ShouldThrowException() {
+        Loan loan = new Loan();
+        loan.setId(1L);
+        loan.setEquipmentId(10L);
+        loan.setStatus(LoanStatus.CANCELLED);
+
+        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            loanService.returnLoan(1L);
+        });
+
+        assertTrue(exception.getMessage().contains("already completed"));
+        verify(loanRepository, never()).save(any(Loan.class));
+    }
 }
