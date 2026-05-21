@@ -34,6 +34,7 @@ frontend/src/
 │   ├── equipmentService.ts       # Equipment API calls
 │   ├── loanService.ts            # Loan API calls
 │   ├── userService.ts            # User API calls
+│   ├── waitingListService.ts     # Waiting list API calls
 │   └── http/
 │       └── client.ts            # Axios HTTP client configuration
 ├── shared/

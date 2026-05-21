@@ -34,3 +34,10 @@ export interface ApiError {
   message: string
   status: number
 }
+
+export interface WaitingList {
+  id: number
+  userId: number
+  equipmentId: number
+  requestDate: string
+}

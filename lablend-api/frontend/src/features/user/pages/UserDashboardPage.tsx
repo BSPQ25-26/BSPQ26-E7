@@ -12,10 +12,12 @@ import {
   Typography,
   Autocomplete,
   TextField,
+  Chip,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { equipmentService } from '../../../services/equipmentService'
 import { loanService } from '../../../services/loanService'
+import { waitingListService } from '../../../services/waitingListService'
 import { useAuth } from '../../auth/context/AuthContext'
 import type { Equipment, Loan } from '../../../shared/types/domain'
 import { AppSnackbar } from '../../../shared/ui/AppSnackbar'
@@ -32,9 +34,9 @@ export const UserDashboardPage = () => {
     severity: 'success' | 'error' | 'info' | 'warning'
   } | null>(null)
 
-  const availableEquipment = useMemo(
-    () => equipment.filter((item) => item.status === 'AVAILABLE'),
-    [equipment],
+  const selectedItem = useMemo(
+    () => equipment.find((item) => String(item.id) === selectedEquipmentId) ?? null,
+    [equipment, selectedEquipmentId],
   )
 
   const activeUserLoans = useMemo(
@@ -42,62 +44,78 @@ export const UserDashboardPage = () => {
     [loans, session?.userId],
   )
 
+  const isAlreadyLoanedByMe = useMemo(() => {
+    if (!selectedItem || !session?.userId) return false
+    return loans.some(
+      (loan) =>
+        loan.equipmentId === selectedItem.id &&
+        loan.userId === session.userId &&
+        loan.status === 'ACTIVE'
+    )
+  }, [loans, selectedItem, session?.userId])
+
   const equipmentById = useMemo(
     () => new Map(equipment.map((item) => [item.id, item])),
     [equipment],
   )
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [equipmentResponse, loansResponse] = await Promise.all([
-          equipmentService.getAll(),
-          loanService.getAll(),
-        ])
-        setEquipment(equipmentResponse)
-        setLoans(loansResponse)
-        const available = equipmentResponse.filter((item) => item.status === 'AVAILABLE')
-        if (available.length > 0) {
-          setSelectedEquipmentId(String(available[0].id))
-        } else {
-          setSelectedEquipmentId(null)
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to load equipment.'
-        setSnackbar({ message, severity: 'error' })
-      }
-    }
-
-    void loadData()
-  }, [])
-
-
-  const submitLoan = async () => {
-    if (!session) {
-      return
-    }
-
-    const parsedEquipmentId = Number(selectedEquipmentId)
-    if (Number.isNaN(parsedEquipmentId) || parsedEquipmentId <= 0) {
-      setSnackbar({ message: 'Select an available item before creating the loan.', severity: 'warning' })
-      return
-    }
-
-    setBusyAction('loan')
+  const loadData = async () => {
     try {
-      await loanService.create({
-        userId: session.userId,
-        equipmentId: parsedEquipmentId,
-      })
-      setSnackbar({ message: 'Your loan request was created successfully.', severity: 'success' })
       const [equipmentResponse, loansResponse] = await Promise.all([
         equipmentService.getAll(),
         loanService.getAll(),
       ])
       setEquipment(equipmentResponse)
       setLoans(loansResponse)
+      
+      if (equipmentResponse.length > 0 && !selectedEquipmentId) {
+        setSelectedEquipmentId(String(equipmentResponse[0].id))
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load equipment.'
+      setSnackbar({ message, severity: 'error' })
+    }
+  }
+
+  useEffect(() => {
+    void loadData()
+  }, [])
+
+  const submitLoan = async () => {
+    if (!session || !selectedItem) return
+
+    setBusyAction('loan')
+    try {
+      await loanService.create({
+        userId: session.userId,
+        equipmentId: selectedItem.id,
+      })
+      setSnackbar({ message: 'Your loan request was created successfully.', severity: 'success' })
+      await loadData()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to create loan.'
+      setSnackbar({ message, severity: 'error' })
+    } finally {
+      setBusyAction(null)
+    }
+  }
+
+  const handleJoinWaitingList = async () => {
+    if (!session || !selectedItem || isAlreadyLoanedByMe) return
+
+    setBusyAction('waiting')
+    try {
+      await waitingListService.join({
+        userId: session.userId,
+        equipmentId: selectedItem.id,
+      })
+      setSnackbar({ 
+        message: `You have successfully joined the waiting list for ${selectedItem.name}!`, 
+        severity: 'success' 
+      })
+      await loadData()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to join the waiting list.'
       setSnackbar({ message, severity: 'error' })
     } finally {
       setBusyAction(null)
@@ -109,12 +127,7 @@ export const UserDashboardPage = () => {
     try {
       await loanService.returnLoan(loanId)
       setSnackbar({ message: 'The borrowed item was returned successfully.', severity: 'success' })
-      const [equipmentResponse, loansResponse] = await Promise.all([
-        equipmentService.getAll(),
-        loanService.getAll(),
-      ])
-      setEquipment(equipmentResponse)
-      setLoans(loansResponse)
+      await loadData()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to return the borrowed item.'
       setSnackbar({ message, severity: 'error' })
@@ -137,17 +150,17 @@ export const UserDashboardPage = () => {
           <CardContent>
             <Stack spacing={2}>
               <SectionHeader
-                title="Loan equipment"
-                subtitle="Pick an available item and we’ll create the loan for your account."
+                title="Equipment Center"
+                subtitle="Pick any item to borrow it instantly or join its waiting list if it's currently loaned."
               />
 
-              {availableEquipment.length === 0 ? (
+              {equipment.length === 0 ? (
                 <Card variant="outlined" sx={{ backgroundColor: 'background.default' }}>
                   <CardContent>
                     <Stack spacing={1}>
-                      <Typography variant="h6">Nothing available right now</Typography>
+                      <Typography variant="h6">No inventory found</Typography>
                       <Typography color="text.secondary">
-                        All equipment is currently reserved or under maintenance. Check back later or refresh the list.
+                        There is no equipment registered in the system database.
                       </Typography>
                     </Stack>
                   </CardContent>
@@ -155,23 +168,54 @@ export const UserDashboardPage = () => {
               ) : (
                 <>
                   <Autocomplete
-                    options={availableEquipment}
-                    getOptionLabel={(option) => `${option.id} - ${option.name}`}
+                    options={equipment}
+                    getOptionLabel={(option) => `${option.id} - ${option.name} (${option.status})`}
                     isOptionEqualToValue={(option, value) => option.id === value.id}
-                    value={availableEquipment.find((item) => String(item.id) === selectedEquipmentId) ?? null}
-                    onChange={(_, value) => setSelectedEquipmentId(value ? String(value.id) : '')}
+                    value={selectedItem}
+                    onChange={(_, value) => setSelectedEquipmentId(value ? String(value.id) : null)}
                     size="small"
                     fullWidth
-                    noOptionsText="No available equipment"
-                    renderInput={(params) => <TextField {...params} label="Available equipment" />}
+                    noOptionsText="No equipment found"
+                    renderInput={(params) => <TextField {...params} label="Select Equipment" />}
                   />
-                  <Button
-                    variant="contained"
-                    onClick={() => void submitLoan()}
-                    disabled={busyAction === 'loan'}
-                  >
-                    {busyAction === 'loan' ? 'Creating loan...' : 'Borrow selected equipment'}
-                  </Button>
+
+                  {selectedItem && selectedItem.status === 'AVAILABLE' ? (
+                    <Button
+                      variant="contained"
+                      onClick={() => void submitLoan()}
+                      disabled={busyAction === 'loan'}
+                      fullWidth
+                    >
+                      {busyAction === 'loan' ? 'Creating loan...' : 'Borrow selected equipment'}
+                    </Button>
+                  ) : selectedItem ? (
+                    <Stack spacing={1} width="100%">
+                      <Chip 
+                        label={
+                          isAlreadyLoanedByMe 
+                            ? "You currently have an active borrow for this item" 
+                            : selectedItem.status === 'UNDER_MAINTENANCE'
+                            ? "This item is currently under maintenance"
+                            : "This item is currently loaned to another student"
+                        } 
+                        color={isAlreadyLoanedByMe ? "error" : selectedItem.status === 'UNDER_MAINTENANCE' ? "info" : "warning"} 
+                        variant="outlined" 
+                      />
+                      <Button
+                        variant="contained"
+                        color={selectedItem.status === 'UNDER_MAINTENANCE' ? "primary" : "secondary"}
+                        onClick={() => void handleJoinWaitingList()}
+                        disabled={busyAction === 'waiting' || isAlreadyLoanedByMe}
+                        fullWidth
+                      >
+                        {isAlreadyLoanedByMe 
+                          ? "Cannot join list (Item already in possession)" 
+                          : busyAction === 'waiting' 
+                          ? 'Joining list...' 
+                          : 'Join the Waiting List'}
+                      </Button>
+                    </Stack>
+                  ) : null}
                 </>
               )}
             </Stack>
