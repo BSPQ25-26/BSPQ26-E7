@@ -11,6 +11,7 @@ graph TB
             EquipmentController
             LoanController
             UserController
+            WaitingListController
             subgraph auth_pkg [auth]
                 AuthController
             end
@@ -98,6 +99,7 @@ graph TB
 - `LoanController` — `/api/loans/*` endpoints
 - `UserController` — `/api/users/*` endpoints
 - `AuthController` — `/api/auth/*` endpoints
+- `WaitingListController` — `/api/waiting-list/*` endpoints
 
 **Characteristics**:
 - Stateless (no session state)

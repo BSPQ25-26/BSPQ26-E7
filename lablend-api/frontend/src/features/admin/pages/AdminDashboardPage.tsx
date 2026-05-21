@@ -21,14 +21,21 @@ import {
   TextField,
   Typography,
   Autocomplete,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  Avatar,
 } from '@mui/material'
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { equipmentService } from '../../../services/equipmentService'
 import { loanService } from '../../../services/loanService'
 import { userService } from '../../../services/userService'
+import { waitingListService } from '../../../services/waitingListService' 
 import { useAuth } from '../../auth/context/AuthContext'
-import type { Equipment, EquipmentStatus, Loan, LoanStatus, User, UserRole } from '../../../shared/types/domain'
+import type { Equipment, EquipmentStatus, Loan, LoanStatus, User, UserRole, WaitingList } from '../../../shared/types/domain'
 import { AppSnackbar } from '../../../shared/ui/AppSnackbar'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog'
 import { SectionHeader } from '../../../shared/ui/SectionHeader'
@@ -37,7 +44,7 @@ const EQUIPMENT_STATUSES: EquipmentStatus[] = ['AVAILABLE', 'RESERVED', 'UNDER_M
 const LOAN_STATUSES: LoanStatus[] = ['ACTIVE', 'COMPLETED', 'CANCELLED']
 const USER_ROLES: UserRole[] = ['ADMIN', 'USER']
 
-type AdminSection = 'people' | 'assets' | 'loans' | 'flagged'
+type AdminSection = 'people' | 'assets' | 'loans' | 'flagged' | 'waiting'
 
 type SnackbarState = {
   message: string
@@ -91,6 +98,10 @@ export const AdminDashboardPage = () => {
   const [userPassword, setUserPassword] = useState('')
   const [userRole, setUserRole] = useState<UserRole>('USER')
 
+  const [selectedWaitingEquipmentId, setSelectedWaitingEquipmentId] = useState<string | null>(null)
+  const [currentQueue, setCurrentQueue] = useState<WaitingList[]>([])
+  const [loadingQueue, setLoadingQueue] = useState(false)
+
   const equipmentById = useMemo(() => new Map(equipment.map((item) => [item.id, item])), [equipment])
   const stats = useMemo(
     () => ({
@@ -101,6 +112,11 @@ export const AdminDashboardPage = () => {
       flagged: flaggedUsers.length,
     }),
     [equipment, loans, users, flaggedUsers],
+  )
+
+  const selectedWaitingItem = useMemo(
+    () => equipment.find((item) => String(item.id) === selectedWaitingEquipmentId) ?? null,
+    [equipment, selectedWaitingEquipmentId],
   )
 
   const notify = (message: string, severity: SnackbarState['severity']) => {
@@ -144,6 +160,29 @@ export const AdminDashboardPage = () => {
   }, [loadData])
 
   useEffect(() => {
+    const loadQueue = async () => {
+      if (!selectedWaitingEquipmentId) {
+        setCurrentQueue([])
+        return
+      }
+      setLoadingQueue(true)
+      try {
+        const response = await waitingListService.getQueueForEquipment(Number(selectedWaitingEquipmentId))
+        const sorted = response.sort(
+          (a, b) => new Date(a.requestDate).getTime() - new Date(b.requestDate).getTime()
+        )
+        setCurrentQueue(sorted)
+      } catch (error) {
+        notify('Could not load the waiting queue for this asset.', 'error')
+      } finally {
+        setLoadingQueue(false)
+      }
+    }
+
+    void loadQueue()
+  }, [selectedWaitingEquipmentId])
+
+  useEffect(() => {
     if (users.length === 0) {
       setLoanUserId('')
       return
@@ -167,39 +206,38 @@ export const AdminDashboardPage = () => {
   const closeConfirm = () => setConfirmState(null)
 
   const handleUnblockUser = async (id: number) => {
-  setBusyAction(`unblock-user-${id}`)
-  try {
-    await userService.unblock(id)
-    notify('Student unblocked successfully. Their account is now active.', 'success')
-  } catch (error: any) {
-    if (error.response?.status === 200 || !error.response) {
+    setBusyAction(`unblock-user-${id}`)
+    try {
+      await userService.unblock(id)
       notify('Student unblocked successfully. Their account is now active.', 'success')
-    } else {
-      // Este sí es un error real (ej: un 403 o 404 de Java)
-      notify(error.response?.data || 'Failed to unblock student.', 'error')
+    } catch (error: any) {
+      if (error.response?.status === 200 || !error.response) {
+        notify('Student unblocked successfully. Their account is now active.', 'success')
+      } else {
+        notify(error.response?.data || 'Failed to unblock student.', 'error')
+      }
+    } finally {
+      await loadData()
+      setBusyAction(null)
     }
-  } finally {
-    await loadData()
-    setBusyAction(null)
   }
-}
 
-const handleBlockUser = async (id: number) => {
-  setBusyAction(`block-user-${id}`)
-  try {
-    await userService.block(id)
-    notify('Student blocked successfully. Their account is now inactive.', 'success')
-  } catch (error: any) {
-    if (error.response?.status === 200 || !error.response) {
+  const handleBlockUser = async (id: number) => {
+    setBusyAction(`block-user-${id}`)
+    try {
+      await userService.block(id)
       notify('Student blocked successfully. Their account is now inactive.', 'success')
-    } else {
-      notify(error.response?.data || 'Failed to block student.', 'error')
+    } catch (error: any) {
+      if (error.response?.status === 200 || !error.response) {
+        notify('Student blocked successfully. Their account is now inactive.', 'success')
+      } else {
+        notify(error.response?.data || 'Failed to block student.', 'error')
+      }
+    } finally {
+      await loadData()
+      setBusyAction(null)
     }
-  } finally {
-    await loadData()
-    setBusyAction(null)
   }
-}
 
   const submitEquipment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -450,6 +488,7 @@ const handleBlockUser = async (id: number) => {
               <SectionTab label="Assets" value="assets" />
               <SectionTab label="Loans" value="loans" />
               <SectionTab label="Flagged Students" value="flagged" />
+              <SectionTab label="Waiting List" value="waiting" />
             </Tabs>
           </CardContent>
         </Card>
@@ -889,14 +928,14 @@ const handleBlockUser = async (id: number) => {
                         renderEmptyRow('No students are currently penalized. Everything is clear!', 6)
                       ) : (
                         flaggedUsers.map((user: any) => {
-                          const needsManualReview = !!user.requiresManualReview
+                          const needsManualReview = !user.requiresManualReview
 
                           return (
                             <TableRow key={user.id}>
                               <TableCell>{user.id}</TableCell>
                               <TableCell>{user.name}</TableCell>
                               <TableCell>{user.email}</TableCell>
-                              <TableCell>{user.penaltyCount ?? 0} tarditades / faltas</TableCell>
+                              <TableCell>{user.penaltyCount ?? 0} late returns / overdue returns</TableCell>
                               <TableCell>
                                 {needsManualReview ? (
                                   <Chip size="small" label="MANUAL OVERRIDE REQUIRED" color="error" variant="filled" sx={{ fontWeight: 'bold' }} />
@@ -924,6 +963,108 @@ const handleBlockUser = async (id: number) => {
                 </TableContainer>
               </CardContent>
             </Card>
+          </Stack>
+        ) : null}
+
+        {activeSection === 'waiting' ? (
+          <Stack spacing={2}>
+            <Card>
+              <CardContent>
+                <SectionHeader
+                  title="Waiting Queue Inspector"
+                  subtitle="Select any asset from the inventory to view its live reservation queue and chronological student positions."
+                />
+                <Box mt={3}>
+                  <Autocomplete
+                    options={equipment}
+                    getOptionLabel={(option) => `${option.id} - ${option.name} (${option.status})`}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    value={selectedWaitingItem}
+                    onChange={(_, value) => setSelectedWaitingEquipmentId(value ? String(value.id) : null)}
+                    size="small"
+                    fullWidth
+                    noOptionsText="No equipment found"
+                    renderInput={(params) => <TextField {...params} label="Select Laboratory Equipment to Inspect" />}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+
+            {selectedWaitingItem ? (
+              <Card>
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography variant="h6">
+                        Queue for:{' '}
+                        <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
+                          {selectedWaitingItem.name}
+                        </span>
+                      </Typography>
+                      <Chip
+                        label={`${currentQueue.length} students waiting`}
+                        color={currentQueue.length > 0 ? 'primary' : 'default'}
+                        size="small"
+                      />
+                    </Box>
+
+                    <Divider />
+
+                    {loadingQueue ? (
+                      <Typography color="text.secondary" sx={{ py: 2 }}>
+                        Fetching queue records...
+                      </Typography>
+                    ) : currentQueue.length === 0 ? (
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 3, justifyContent: 'center' }}>
+                        <HourglassEmptyIcon color="disabled" />
+                        <Typography color="text.secondary">
+                          No students are currently waiting for this item.
+                        </Typography>
+                      </Stack>
+                    ) : (
+                      <List disablePadding>
+                        {currentQueue.map((entry, index) => (
+                          <Stack key={entry.id}>
+                            {index > 0 ? <Divider component="li" /> : null}
+                            <ListItem disableGutters>
+                              <Avatar
+                                sx={{
+                                  width: 28,
+                                  height: 28,
+                                  fontSize: '0.875rem',
+                                  mr: 2,
+                                  bgcolor: index === 0 ? 'success.main' : 'action.selected',
+                                  color: index === 0 ? 'white' : 'text.primary',
+                                }}
+                              >
+                                {index + 1}
+                              </Avatar>
+
+                              <ListItemText
+                                primary={`Student User ID: #${entry.userId}`}
+                                secondary={`In queue since: ${formatDateTime(entry.requestDate)}`}
+                              />
+
+                              {index === 0 && (
+                                <Chip label="Next in line" color="success" size="small" variant="outlined" />
+                              )}
+                            </ListItem>
+                          </Stack>
+                        ))}
+                      </List>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card variant="outlined" sx={{ borderStyle: 'dashed', backgroundColor: 'background.default' }}>
+                <CardContent sx={{ py: 5, textAlign: 'center' }}>
+                  <Typography color="text.secondary">
+                    Please choose a piece of laboratory equipment above to view its live queue.
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
           </Stack>
         ) : null}
       </Stack>
