@@ -14,7 +14,7 @@ import {
   TextField,
   Chip,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { equipmentService } from '../../../services/equipmentService'
 import { loanService } from '../../../services/loanService'
 import { waitingListService } from '../../../services/waitingListService'
@@ -22,9 +22,12 @@ import { useAuth } from '../../auth/context/AuthContext'
 import type { Equipment, Loan } from '../../../shared/types/domain'
 import { AppSnackbar } from '../../../shared/ui/AppSnackbar'
 import { SectionHeader } from '../../../shared/ui/SectionHeader'
+import { LanguageSwitcher } from '../../../shared/i18n/LanguageSwitcher'
+import { useI18n } from '../../../shared/i18n/I18nContext'
 
 export const UserDashboardPage = () => {
   const { session, logout } = useAuth()
+  const { t } = useI18n()
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [loans, setLoans] = useState<Loan[]>([])
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null)
@@ -59,7 +62,7 @@ export const UserDashboardPage = () => {
     [equipment],
   )
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [equipmentResponse, loansResponse] = await Promise.all([
         equipmentService.getAll(),
@@ -72,14 +75,14 @@ export const UserDashboardPage = () => {
         setSelectedEquipmentId(String(equipmentResponse[0].id))
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to load equipment.'
+      const message = error instanceof Error ? error.message : t('user.notify.loadFailed')
       setSnackbar({ message, severity: 'error' })
     }
-  }
+  }, [selectedEquipmentId, t])
 
   useEffect(() => {
     void loadData()
-  }, [])
+  }, [loadData])
 
   const submitLoan = async () => {
     if (!session || !selectedItem) return
@@ -90,10 +93,10 @@ export const UserDashboardPage = () => {
         userId: session.userId,
         equipmentId: selectedItem.id,
       })
-      setSnackbar({ message: 'Your loan request was created successfully.', severity: 'success' })
+      setSnackbar({ message: t('user.notify.loanCreated'), severity: 'success' })
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to create loan.'
+      const message = error instanceof Error ? error.message : t('user.notify.loanFailed')
       setSnackbar({ message, severity: 'error' })
     } finally {
       setBusyAction(null)
@@ -110,12 +113,12 @@ export const UserDashboardPage = () => {
         equipmentId: selectedItem.id,
       })
       setSnackbar({ 
-        message: `You have successfully joined the waiting list for ${selectedItem.name}!`, 
+        message: t('user.notify.joined', { name: selectedItem.name }), 
         severity: 'success' 
       })
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to join the waiting list.'
+      const message = error instanceof Error ? error.message : t('user.notify.joinFailed')
       setSnackbar({ message, severity: 'error' })
     } finally {
       setBusyAction(null)
@@ -126,10 +129,10 @@ export const UserDashboardPage = () => {
     setBusyAction(`return-${loanId}`)
     try {
       await loanService.returnLoan(loanId)
-      setSnackbar({ message: 'The borrowed item was returned successfully.', severity: 'success' })
+      setSnackbar({ message: t('user.notify.returned'), severity: 'success' })
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to return the borrowed item.'
+      const message = error instanceof Error ? error.message : t('user.notify.returnFailed')
       setSnackbar({ message, severity: 'error' })
     } finally {
       setBusyAction(null)
@@ -139,29 +142,28 @@ export const UserDashboardPage = () => {
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>
       <Stack spacing={3}>
-        <Box>
-          <Typography variant="h3">Welcome, {session?.username}</Typography>
-          <Typography color="text.secondary">
-            This page keeps the borrowing flow simple and focused.
-          </Typography>
-        </Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'flex-start' }} gap={2}>
+          <Box>
+            <Typography variant="h3">{t('user.title', { username: session?.username ?? '' })}</Typography>
+            <Typography color="text.secondary">{t('user.subtitle')}</Typography>
+          </Box>
+          <LanguageSwitcher />
+        </Stack>
 
         <Card>
           <CardContent>
             <Stack spacing={2}>
               <SectionHeader
-                title="Equipment Center"
-                subtitle="Pick any item to borrow it instantly or join its waiting list if it's currently loaned."
+                title={t('user.equipment.title')}
+                subtitle={t('user.equipment.subtitle')}
               />
 
               {equipment.length === 0 ? (
                 <Card variant="outlined" sx={{ backgroundColor: 'background.default' }}>
                   <CardContent>
                     <Stack spacing={1}>
-                      <Typography variant="h6">No inventory found</Typography>
-                      <Typography color="text.secondary">
-                        There is no equipment registered in the system database.
-                      </Typography>
+                      <Typography variant="h6">{t('user.equipment.emptyTitle')}</Typography>
+                      <Typography color="text.secondary">{t('user.equipment.emptySubtitle')}</Typography>
                     </Stack>
                   </CardContent>
                 </Card>
@@ -175,8 +177,8 @@ export const UserDashboardPage = () => {
                     onChange={(_, value) => setSelectedEquipmentId(value ? String(value.id) : null)}
                     size="small"
                     fullWidth
-                    noOptionsText="No equipment found"
-                    renderInput={(params) => <TextField {...params} label="Select Equipment" />}
+                    noOptionsText={t('user.equipment.noOptions')}
+                    renderInput={(params) => <TextField {...params} label={t('user.equipment.select')} />}
                   />
 
                   {selectedItem && selectedItem.status === 'AVAILABLE' ? (
@@ -186,17 +188,17 @@ export const UserDashboardPage = () => {
                       disabled={busyAction === 'loan'}
                       fullWidth
                     >
-                      {busyAction === 'loan' ? 'Creating loan...' : 'Borrow selected equipment'}
+                      {busyAction === 'loan' ? t('user.equipment.creatingLoan') : t('user.equipment.borrow')}
                     </Button>
                   ) : selectedItem ? (
                     <Stack spacing={1} width="100%">
                       <Chip 
                         label={
                           isAlreadyLoanedByMe 
-                            ? "You currently have an active borrow for this item" 
+                            ? t('user.equipment.activeBorrow') 
                             : selectedItem.status === 'UNDER_MAINTENANCE'
-                            ? "This item is currently under maintenance"
-                            : "This item is currently loaned to another student"
+                            ? t('user.equipment.maintenance')
+                            : t('user.equipment.loaned')
                         } 
                         color={isAlreadyLoanedByMe ? "error" : selectedItem.status === 'UNDER_MAINTENANCE' ? "info" : "warning"} 
                         variant="outlined" 
@@ -209,10 +211,10 @@ export const UserDashboardPage = () => {
                         fullWidth
                       >
                         {isAlreadyLoanedByMe 
-                          ? "Cannot join list (Item already in possession)" 
+                          ? t('user.equipment.cannotJoin') 
                           : busyAction === 'waiting' 
-                          ? 'Joining list...' 
-                          : 'Join the Waiting List'}
+                          ? t('user.equipment.joining') 
+                          : t('user.equipment.join')}
                       </Button>
                     </Stack>
                   ) : null}
@@ -226,13 +228,13 @@ export const UserDashboardPage = () => {
           <CardContent>
             <Stack spacing={2}>
               <SectionHeader
-                title="Your active borrows"
-                subtitle="Use these entries to end a borrow and make the equipment available again."
+                title={t('user.active.title')}
+                subtitle={t('user.active.subtitle')}
               />
 
               {activeUserLoans.length === 0 ? (
                 <Typography color="text.secondary">
-                  You do not have any active borrows right now.
+                  {t('user.active.empty')}
                 </Typography>
               ) : (
                 <List disablePadding>
@@ -250,16 +252,16 @@ export const UserDashboardPage = () => {
                               onClick={() => void returnLoan(loan.id)}
                               disabled={busyAction === `return-${loan.id}`}
                             >
-                              {busyAction === `return-${loan.id}` ? 'Returning...' : 'End borrow'}
+                              {busyAction === `return-${loan.id}` ? t('user.active.returning') : t('user.active.return')}
                             </Button>
                           }
                         >
                           <ListItemText
-                            primary={borrowedEquipment ? borrowedEquipment.name : `Equipment #${loan.equipmentId}`}
+                            primary={borrowedEquipment ? borrowedEquipment.name : t('user.active.fallback', { id: loan.equipmentId })}
                             secondary={
                               borrowedEquipment
-                                ? `${borrowedEquipment.type} · Borrowed on ${new Date(loan.loanDate).toLocaleDateString()}`
-                                : `Borrowed on ${new Date(loan.loanDate).toLocaleDateString()}`
+                                ? `${borrowedEquipment.type} - ${t('user.active.borrowedOn', { date: new Date(loan.loanDate).toLocaleDateString() })}`
+                                : t('user.active.borrowedOn', { date: new Date(loan.loanDate).toLocaleDateString() })
                             }
                           />
                         </ListItem>
@@ -273,7 +275,7 @@ export const UserDashboardPage = () => {
         </Card>
 
         <Button variant="text" onClick={logout} sx={{ alignSelf: 'flex-start' }}>
-          Logout
+          {t('common.logout')}
         </Button>
       </Stack>
 

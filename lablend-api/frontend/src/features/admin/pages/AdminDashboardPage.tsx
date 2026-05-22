@@ -39,6 +39,8 @@ import type { Equipment, EquipmentStatus, Loan, LoanStatus, User, UserRole, Wait
 import { AppSnackbar } from '../../../shared/ui/AppSnackbar'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog'
 import { SectionHeader } from '../../../shared/ui/SectionHeader'
+import { LanguageSwitcher } from '../../../shared/i18n/LanguageSwitcher'
+import { useI18n } from '../../../shared/i18n/I18nContext'
 
 const EQUIPMENT_STATUSES: EquipmentStatus[] = ['AVAILABLE', 'RESERVED', 'UNDER_MAINTENANCE']
 const LOAN_STATUSES: LoanStatus[] = ['ACTIVE', 'COMPLETED', 'CANCELLED']
@@ -59,6 +61,16 @@ type ConfirmState = {
   action: () => Promise<void>
 } | null
 
+type HttpErrorLike = {
+  response?: {
+    status?: number
+    data?: string
+  }
+}
+
+const getHttpError = (error: unknown): HttpErrorLike =>
+  typeof error === 'object' && error !== null ? (error as HttpErrorLike) : {}
+
 const formatDateTime = (value: string): string => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -71,6 +83,7 @@ const SectionTab = (props: { label: string; value: AdminSection }) => <Tab {...p
 
 export const AdminDashboardPage = () => {
   const { logout, session } = useAuth()
+  const { t } = useI18n()
   const [activeSection, setActiveSection] = useState<AdminSection>('people')
 
   const [equipment, setEquipment] = useState<Equipment[]>([])
@@ -119,9 +132,9 @@ export const AdminDashboardPage = () => {
     [equipment, selectedWaitingEquipmentId],
   )
 
-  const notify = (message: string, severity: SnackbarState['severity']) => {
+  const notify = useCallback((message: string, severity: SnackbarState['severity']) => {
     setSnackbar({ message, severity })
-  }
+  }, [])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -148,12 +161,12 @@ export const AdminDashboardPage = () => {
         Object.fromEntries(loanResponse.map((loan) => [loan.id, loan.status])) as Record<number, LoanStatus>,
       )
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load dashboard data.'
+      const message = error instanceof Error ? error.message : t('admin.notify.loadFailed')
       notify(message, 'error')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [notify, t])
 
   useEffect(() => {
     void loadData()
@@ -172,15 +185,15 @@ export const AdminDashboardPage = () => {
           (a, b) => new Date(a.requestDate).getTime() - new Date(b.requestDate).getTime()
         )
         setCurrentQueue(sorted)
-      } catch (error) {
-        notify('Could not load the waiting queue for this asset.', 'error')
+      } catch {
+        notify(t('admin.notify.queueFailed'), 'error')
       } finally {
         setLoadingQueue(false)
       }
     }
 
     void loadQueue()
-  }, [selectedWaitingEquipmentId])
+  }, [notify, selectedWaitingEquipmentId, t])
 
   useEffect(() => {
     if (users.length === 0) {
@@ -209,12 +222,13 @@ export const AdminDashboardPage = () => {
     setBusyAction(`unblock-user-${id}`)
     try {
       await userService.unblock(id)
-      notify('Student unblocked successfully. Their account is now active.', 'success')
-    } catch (error: any) {
-      if (error.response?.status === 200 || !error.response) {
-        notify('Student unblocked successfully. Their account is now active.', 'success')
+      notify(t('admin.notify.unblocked'), 'success')
+    } catch (error: unknown) {
+      const httpError = getHttpError(error)
+      if (httpError.response?.status === 200 || !httpError.response) {
+        notify(t('admin.notify.unblocked'), 'success')
       } else {
-        notify(error.response?.data || 'Failed to unblock student.', 'error')
+        notify(httpError.response?.data || t('admin.notify.unblockFailed'), 'error')
       }
     } finally {
       await loadData()
@@ -226,12 +240,13 @@ export const AdminDashboardPage = () => {
     setBusyAction(`block-user-${id}`)
     try {
       await userService.block(id)
-      notify('Student blocked successfully. Their account is now inactive.', 'success')
-    } catch (error: any) {
-      if (error.response?.status === 200 || !error.response) {
-        notify('Student blocked successfully. Their account is now inactive.', 'success')
+      notify(t('admin.notify.blocked'), 'success')
+    } catch (error: unknown) {
+      const httpError = getHttpError(error)
+      if (httpError.response?.status === 200 || !httpError.response) {
+        notify(t('admin.notify.blocked'), 'success')
       } else {
-        notify(error.response?.data || 'Failed to block student.', 'error')
+        notify(httpError.response?.data || t('admin.notify.blockFailed'), 'error')
       }
     } finally {
       await loadData()
@@ -242,7 +257,7 @@ export const AdminDashboardPage = () => {
   const submitEquipment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!equipmentName.trim() || !equipmentType.trim()) {
-      notify('Equipment name and type are required.', 'warning')
+      notify(t('admin.notify.equipmentRequired'), 'warning')
       return
     }
 
@@ -256,10 +271,10 @@ export const AdminDashboardPage = () => {
       setEquipmentName('')
       setEquipmentType('')
       setEquipmentStatus('AVAILABLE')
-      notify('Equipment added to the catalog.', 'success')
+      notify(t('admin.notify.equipmentCreated'), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to create equipment.'
+      const message = error instanceof Error ? error.message : t('admin.notify.equipmentCreateFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -272,17 +287,17 @@ export const AdminDashboardPage = () => {
     const parsedEquipmentId = Number(loanEquipmentId)
 
     if (Number.isNaN(parsedUserId) || parsedUserId <= 0 || Number.isNaN(parsedEquipmentId) || parsedEquipmentId <= 0) {
-      notify('Choose both a user and an equipment item to create the loan.', 'warning')
+      notify(t('admin.notify.loanRequired'), 'warning')
       return
     }
 
     setBusyAction('create-loan')
     try {
       await loanService.create({ userId: parsedUserId, equipmentId: parsedEquipmentId })
-      notify('Loan created successfully.', 'success')
+      notify(t('admin.notify.loanCreated'), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to create loan.'
+      const message = error instanceof Error ? error.message : t('admin.notify.loanCreateFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -292,7 +307,7 @@ export const AdminDashboardPage = () => {
   const submitUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!userName.trim() || !userEmail.trim()) {
-      notify('Name and email are required to create a user.', 'warning')
+      notify(t('admin.notify.userRequired'), 'warning')
       return
     }
 
@@ -308,10 +323,10 @@ export const AdminDashboardPage = () => {
       setUserEmail('')
       setUserPassword('')
       setUserRole('USER')
-      notify('User created and ready for access.', 'success')
+      notify(t('admin.notify.userCreated'), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to create user.'
+      const message = error instanceof Error ? error.message : t('admin.notify.userCreateFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -321,17 +336,17 @@ export const AdminDashboardPage = () => {
   const updateUser = async (user: User) => {
     const draft = userDrafts[user.id] ?? { name: user.name, email: user.email, role: user.role }
     if (!draft.name.trim() || !draft.email.trim()) {
-      notify('User name and email are required.', 'warning')
+      notify(t('admin.notify.userUpdateRequired'), 'warning')
       return
     }
 
     setBusyAction(`update-user-${user.id}`)
     try {
       await userService.update(user.id, { name: draft.name.trim(), email: draft.email.trim(), role: draft.role })
-      notify(`User ${user.id} saved.`, 'success')
+      notify(t('admin.notify.userSaved', { id: user.id }), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update user.'
+      const message = error instanceof Error ? error.message : t('admin.notify.userUpdateFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -342,10 +357,10 @@ export const AdminDashboardPage = () => {
     setBusyAction(`delete-user-${id}`)
     try {
       await userService.remove(id)
-      notify(`User ${id} deleted.`, 'success')
+      notify(t('admin.notify.userDeleted', { id }), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to delete user.'
+      const message = error instanceof Error ? error.message : t('admin.notify.userDeleteFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -356,10 +371,10 @@ export const AdminDashboardPage = () => {
     setBusyAction(`reserve-equipment-${item.id}`)
     try {
       await equipmentService.reserve(item.id)
-      notify(`Equipment ${item.id} moved to reserved.`, 'success')
+      notify(t('admin.notify.equipmentReserved', { id: item.id }), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to reserve equipment.'
+      const message = error instanceof Error ? error.message : t('admin.notify.equipmentReserveFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -370,10 +385,10 @@ export const AdminDashboardPage = () => {
     setBusyAction(`status-equipment-${item.id}`)
     try {
       await equipmentService.update(item.id, { name: item.name, type: item.type, status: nextStatus })
-      notify(`Equipment ${item.id} updated.`, 'success')
+      notify(t('admin.notify.equipmentUpdated', { id: item.id }), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update equipment status.'
+      const message = error instanceof Error ? error.message : t('admin.notify.equipmentUpdateFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -384,10 +399,10 @@ export const AdminDashboardPage = () => {
     setBusyAction(`delete-equipment-${id}`)
     try {
       await equipmentService.remove(id)
-      notify(`Equipment ${id} deleted.`, 'success')
+      notify(t('admin.notify.equipmentDeleted', { id }), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to delete equipment.'
+      const message = error instanceof Error ? error.message : t('admin.notify.equipmentDeleteFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -403,10 +418,10 @@ export const AdminDashboardPage = () => {
         equipmentId: loan.equipmentId,
         status: nextStatus,
       })
-      notify(`Loan ${loan.id} saved.`, 'success')
+      notify(t('admin.notify.loanSaved', { id: loan.id }), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update loan status.'
+      const message = error instanceof Error ? error.message : t('admin.notify.loanUpdateFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -417,10 +432,10 @@ export const AdminDashboardPage = () => {
     setBusyAction(`delete-loan-${id}`)
     try {
       await loanService.remove(id)
-      notify(`Loan ${id} deleted.`, 'success')
+      notify(t('admin.notify.loanDeleted', { id }), 'success')
       await loadData()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to delete loan.'
+      const message = error instanceof Error ? error.message : t('admin.notify.loanDeleteFailed')
       notify(message, 'error')
     } finally {
       setBusyAction(null)
@@ -430,11 +445,12 @@ export const AdminDashboardPage = () => {
   const sectionActions = (
     <Stack direction="row" spacing={1.5} flexWrap="wrap">
       <Button variant="outlined" onClick={() => void loadData()} disabled={loading || busyAction !== null}>
-        Refresh
+        {t('common.refresh')}
       </Button>
       <Button variant="outlined" color="inherit" onClick={logout} disabled={busyAction !== null}>
-        Logout
+        {t('common.logout')}
       </Button>
+      <LanguageSwitcher />
     </Stack>
   )
 
@@ -451,9 +467,9 @@ export const AdminDashboardPage = () => {
       <Stack spacing={3}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} gap={1.5}>
           <Box>
-            <Typography variant="h3">Admin Operations</Typography>
+            <Typography variant="h3">{t('admin.title')}</Typography>
             <Typography color="text.secondary">
-              Welcome back, {session?.username}. Use the tabs to move between people, assets, and loan operations.
+              {t('admin.subtitle', { username: session?.username ?? '' })}
             </Typography>
           </Box>
           {sectionActions}
@@ -463,14 +479,14 @@ export const AdminDashboardPage = () => {
           <CardContent>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }} justifyContent="space-between">
               <Box>
-                <Typography variant="h6">Workspace at a glance</Typography>
+                <Typography variant="h6">{t('admin.glance')}</Typography>
               </Box>
               <Stack direction="row" spacing={1} flexWrap="wrap">
-                <Chip label={`${stats.users} users`} color="primary" />
-                <Chip label={`${stats.equipment} items`} color="secondary" />
-                <Chip label={`${stats.available} available`} />
-                <Chip label={`${stats.loans} loans`} />
-                <Chip label={`${stats.flagged} penalized`} color="error" />
+                <Chip label={t('admin.stats.users', { count: stats.users })} color="primary" />
+                <Chip label={t('admin.stats.items', { count: stats.equipment })} color="secondary" />
+                <Chip label={t('admin.stats.available', { count: stats.available })} />
+                <Chip label={t('admin.stats.loans', { count: stats.loans })} />
+                <Chip label={t('admin.stats.flagged', { count: stats.flagged })} color="error" />
               </Stack>
             </Stack>
           </CardContent>
@@ -484,11 +500,11 @@ export const AdminDashboardPage = () => {
               variant="scrollable"
               scrollButtons="auto"
             >
-              <SectionTab label="People" value="people" />
-              <SectionTab label="Assets" value="assets" />
-              <SectionTab label="Loans" value="loans" />
-              <SectionTab label="Flagged Students" value="flagged" />
-              <SectionTab label="Waiting List" value="waiting" />
+              <SectionTab label={t('admin.tabs.people')} value="people" />
+              <SectionTab label={t('admin.tabs.assets')} value="assets" />
+              <SectionTab label={t('admin.tabs.loans')} value="loans" />
+              <SectionTab label={t('admin.tabs.flagged')} value="flagged" />
+              <SectionTab label={t('admin.tabs.waiting')} value="waiting" />
             </Tabs>
           </CardContent>
         </Card>
@@ -498,25 +514,25 @@ export const AdminDashboardPage = () => {
             <Card>
               <CardContent>
                 <SectionHeader
-                  title="Create User"
-                  subtitle="Use a clear account setup flow and keep credentials visible only when needed."
+                  title={t('admin.createUser.title')}
+                  subtitle={t('admin.createUser.subtitle')}
                 />
                 <Stack component="form" spacing={1.5} onSubmit={submitUser} mt={2}>
-                  <TextField value={userName} label="Name" onChange={(event) => setUserName(event.target.value)} />
-                  <TextField value={userEmail} label="Email" onChange={(event) => setUserEmail(event.target.value)} />
+                  <TextField value={userName} label={t('common.name')} onChange={(event) => setUserName(event.target.value)} />
+                  <TextField value={userEmail} label={t('common.email')} onChange={(event) => setUserEmail(event.target.value)} />
                   <TextField
                     type="password"
                     value={userPassword}
-                    label="Password"
+                    label={t('common.password')}
                     onChange={(event) => setUserPassword(event.target.value)}
-                    helperText="Leave blank only if your backend allows passwordless account creation."
+                    helperText={t('admin.createUser.passwordHelp')}
                   />
                   <FormControl>
-                    <InputLabel id="user-role-label">Role</InputLabel>
+                    <InputLabel id="user-role-label">{t('common.role')}</InputLabel>
                     <Select
                       labelId="user-role-label"
                       value={userRole}
-                      label="Role"
+                      label={t('common.role')}
                       onChange={(event) => setUserRole(event.target.value as UserRole)}
                     >
                       {USER_ROLES.map((role) => (
@@ -527,7 +543,7 @@ export const AdminDashboardPage = () => {
                     </Select>
                   </FormControl>
                   <Button type="submit" variant="contained" disabled={busyAction === 'create-user'}>
-                    {busyAction === 'create-user' ? 'Creating...' : 'Create user'}
+                    {busyAction === 'create-user' ? t('admin.createUser.creating') : t('admin.createUser.submit')}
                   </Button>
                 </Stack>
               </CardContent>
@@ -536,25 +552,25 @@ export const AdminDashboardPage = () => {
             <Card>
               <CardContent>
                 <SectionHeader
-                  title="Users"
-                  subtitle="Edit records in place, manage blocks, and confirm destructive changes before they happen."
+                  title={t('admin.users.title')}
+                  subtitle={t('admin.users.subtitle')}
                 />
                 <TableContainer sx={{ mt: 2 }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>ID</TableCell>
-                        <TableCell>Name</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell>Role</TableCell>
-                        <TableCell>Actions</TableCell>
+                        <TableCell>{t('common.id')}</TableCell>
+                        <TableCell>{t('common.name')}</TableCell>
+                        <TableCell>{t('common.email')}</TableCell>
+                        <TableCell>{t('common.role')}</TableCell>
+                        <TableCell>{t('common.actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {loading
-                        ? renderEmptyRow('Loading users...', 5)
+                        ? renderEmptyRow(t('admin.users.loading'), 5)
                         : users.length === 0
-                          ? renderEmptyRow('No users exist yet. Create the first account from the form above.', 5)
+                          ? renderEmptyRow(t('admin.users.empty'), 5)
                           : users.map((user) => {
                               const draft = userDrafts[user.id] ?? { name: user.name, email: user.email, role: user.role }
                               return (
@@ -634,9 +650,9 @@ export const AdminDashboardPage = () => {
                                       variant="outlined"
                                       onClick={() =>
                                         openConfirm({
-                                          title: `Delete user ${user.id}?`,
-                                          description: 'This removes the user record permanently.',
-                                          confirmLabel: 'Delete user',
+                                          title: t('admin.users.deleteTitle', { id: user.id }),
+                                          description: t('admin.users.deleteDescription'),
+                                          confirmLabel: t('admin.users.deleteConfirm'),
                                           danger: true,
                                           action: async () => deleteUser(user.id),
                                         })
@@ -662,18 +678,18 @@ export const AdminDashboardPage = () => {
             <Card>
               <CardContent>
                 <SectionHeader
-                  title="Create Equipment"
-                  subtitle="Keep the asset catalog tidy and focused on what can be loaned."
+                  title={t('admin.equipmentCenter.title')}
+                  subtitle={t('admin.equipmentCenter.subtitle')}
                 />
                 <Stack component="form" spacing={1.5} onSubmit={submitEquipment} mt={2}>
-                  <TextField value={equipmentName} label="Name" onChange={(event) => setEquipmentName(event.target.value)} />
-                  <TextField value={equipmentType} label="Type" onChange={(event) => setEquipmentType(event.target.value)} />
+                  <TextField value={equipmentName} label={t('common.name')} onChange={(event) => setEquipmentName(event.target.value)} />
+                  <TextField value={equipmentType} label={t('common.type')} onChange={(event) => setEquipmentType(event.target.value)} />
                   <FormControl>
-                    <InputLabel id="equipment-status-label">Status</InputLabel>
+                    <InputLabel id="equipment-status-label">{t('common.status')}</InputLabel>
                     <Select
                       labelId="equipment-status-label"
                       value={equipmentStatus}
-                      label="Status"
+                      label={t('common.status')}
                       onChange={(event) => setEquipmentStatus(event.target.value as EquipmentStatus)}
                     >
                       {EQUIPMENT_STATUSES.map((status) => (
@@ -684,7 +700,7 @@ export const AdminDashboardPage = () => {
                     </Select>
                   </FormControl>
                   <Button type="submit" variant="contained" disabled={busyAction === 'create-equipment'}>
-                    {busyAction === 'create-equipment' ? 'Creating...' : 'Create equipment'}
+                    {busyAction === 'create-equipment' ? t('admin.createUser.creating') : t('admin.equipmentCenter.submit')}
                   </Button>
                 </Stack>
               </CardContent>
@@ -693,25 +709,25 @@ export const AdminDashboardPage = () => {
             <Card>
               <CardContent>
                 <SectionHeader
-                  title="Equipment"
-                  subtitle="Reserve available items or update their status in a single place."
+                  title={t('admin.equipment.title')}
+                  subtitle={t('admin.equipment.subtitle')}
                 />
                 <TableContainer sx={{ mt: 2 }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>ID</TableCell>
-                        <TableCell>Name</TableCell>
-                        <TableCell>Type</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Actions</TableCell>
+                        <TableCell>{t('common.id')}</TableCell>
+                        <TableCell>{t('common.name')}</TableCell>
+                        <TableCell>{t('common.type')}</TableCell>
+                        <TableCell>{t('common.status')}</TableCell>
+                        <TableCell>{t('common.actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {loading
-                        ? renderEmptyRow('Loading equipment...', 5)
+                        ? renderEmptyRow(t('admin.equipment.loading'), 5)
                         : equipment.length === 0
-                          ? renderEmptyRow('No equipment exists yet. Add the first item above.', 5)
+                          ? renderEmptyRow(t('admin.equipment.empty'), 5)
                           : equipment.map((item) => (
                               <TableRow key={item.id}>
                                 <TableCell>{item.id}</TableCell>
@@ -728,7 +744,7 @@ export const AdminDashboardPage = () => {
                                       disabled={item.status !== 'AVAILABLE' || busyAction === `reserve-equipment-${item.id}`}
                                       onClick={() => void reserveEquipment(item)}
                                     >
-                                      Reserve
+                                      {t('admin.equipment.reserve')}
                                     </Button>
                                     <FormControl size="small" sx={{ minWidth: 180 }}>
                                       <Select
@@ -750,15 +766,15 @@ export const AdminDashboardPage = () => {
                                       variant="outlined"
                                       onClick={() =>
                                         openConfirm({
-                                          title: `Delete equipment ${item.id}?`,
-                                          description: 'This removes the item from the catalog and cannot be undone.',
-                                          confirmLabel: 'Delete equipment',
+                                          title: t('admin.equipment.deleteTitle', { id: item.id }),
+                                          description: t('admin.equipment.deleteDescription'),
+                                          confirmLabel: t('admin.equipment.deleteConfirm'),
                                           danger: true,
                                           action: async () => deleteEquipment(item.id),
                                         })
                                       }
                                     >
-                                      Delete
+                                      {t('common.delete')}
                                     </Button>
                                   </Stack>
                                 </TableCell>
@@ -777,16 +793,16 @@ export const AdminDashboardPage = () => {
             <Card>
               <CardContent>
                 <SectionHeader
-                  title="Create Loan"
-                  subtitle="Connect a user to available equipment without leaving the loan workspace."
+                  title={t('admin.loans.createTitle')}
+                  subtitle={t('admin.loans.createSubtitle')}
                 />
                 <Stack component="form" spacing={1.5} onSubmit={submitLoan} mt={2}>
                   <FormControl>
-                    <InputLabel id="loan-user-label">User</InputLabel>
+                    <InputLabel id="loan-user-label">{t('common.user')}</InputLabel>
                     <Select
                       labelId="loan-user-label"
                       value={loanUserId}
-                      label="User"
+                      label={t('common.user')}
                       onChange={(event) => setLoanUserId(event.target.value)}
                     >
                       {users.map((user) => (
@@ -805,11 +821,11 @@ export const AdminDashboardPage = () => {
                     size="small"
                     fullWidth
                     loading={loading}
-                    noOptionsText={loading ? 'Loading equipment...' : 'No available equipment'}
-                    renderInput={(params) => <TextField {...params} label="Equipment" />}
+                    noOptionsText={loading ? t('admin.equipment.loading') : t('user.equipment.noAvailable')}
+                    renderInput={(params) => <TextField {...params} label={t('common.equipment')} />}
                   />
                   <Button type="submit" variant="contained" disabled={busyAction === 'create-loan'}>
-                    {busyAction === 'create-loan' ? 'Creating...' : 'Create loan'}
+                    {busyAction === 'create-loan' ? t('admin.loans.creating') : t('admin.loans.submit')}
                   </Button>
                 </Stack>
               </CardContent>
@@ -818,27 +834,27 @@ export const AdminDashboardPage = () => {
             <Card>
               <CardContent>
                 <SectionHeader
-                  title="Loans"
-                  subtitle="Track current and historical loans with a focused, review-friendly table."
+                  title={t('admin.loans.title')}
+                  subtitle={t('admin.loans.subtitle')}
                 />
                 <TableContainer sx={{ mt: 2 }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>ID</TableCell>
-                        <TableCell>User</TableCell>
-                        <TableCell>Equipment</TableCell>
-                        <TableCell>Equipment Name</TableCell>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Actions</TableCell>
+                        <TableCell>{t('common.id')}</TableCell>
+                        <TableCell>{t('common.user')}</TableCell>
+                        <TableCell>{t('common.equipment')}</TableCell>
+                        <TableCell>{t('admin.loans.equipmentName')}</TableCell>
+                        <TableCell>{t('common.date')}</TableCell>
+                        <TableCell>{t('common.status')}</TableCell>
+                        <TableCell>{t('common.actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {loading
-                        ? renderEmptyRow('Loading loans...', 7)
+                        ? renderEmptyRow(t('admin.loans.loading'), 7)
                         : loans.length === 0
-                          ? renderEmptyRow('No loans have been created yet.', 7)
+                          ? renderEmptyRow(t('admin.loans.empty'), 7)
                           : loans.map((loan) => {
                               const relatedEquipment = equipmentById.get(loan.equipmentId)
                               const selectedStatus = loanStatusDrafts[loan.id] ?? loan.status
@@ -870,7 +886,7 @@ export const AdminDashboardPage = () => {
                                         </Select>
                                       </FormControl>
                                       <Button size="small" variant="outlined" onClick={() => void updateLoanStatus(loan)}>
-                                        Save
+                                        {t('common.save')}
                                       </Button>
                                       <Button
                                         size="small"
@@ -878,15 +894,15 @@ export const AdminDashboardPage = () => {
                                         variant="outlined"
                                         onClick={() =>
                                           openConfirm({
-                                            title: `Delete loan ${loan.id}?`,
-                                            description: 'This permanently removes the loan record.',
-                                            confirmLabel: 'Delete loan',
+                                            title: t('admin.loans.deleteTitle', { id: loan.id }),
+                                            description: t('admin.loans.deleteDescription'),
+                                            confirmLabel: t('admin.loans.deleteConfirm'),
                                             danger: true,
                                             action: async () => deleteLoan(loan.id),
                                           })
                                         }
                                       >
-                                        Delete
+                                        {t('common.delete')}
                                       </Button>
                                     </Stack>
                                   </TableCell>
@@ -906,28 +922,28 @@ export const AdminDashboardPage = () => {
             <Card>
               <CardContent>
                 <SectionHeader
-                  title="Flagged & Blocked Students"
-                  subtitle="Review policy violations. Accounts with critical reincidence require manual override before they can be unlocked."
+                  title={t('admin.flagged.title')}
+                  subtitle={t('admin.flagged.subtitle')}
                 />
                 <TableContainer sx={{ mt: 2 }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>ID</TableCell>
-                        <TableCell>Name</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell>Sanctions</TableCell>
-                        <TableCell>Severity Status</TableCell>
-                        <TableCell>Actions</TableCell>
+                        <TableCell>{t('common.id')}</TableCell>
+                        <TableCell>{t('common.name')}</TableCell>
+                        <TableCell>{t('common.email')}</TableCell>
+                        <TableCell>{t('admin.flagged.sanctions')}</TableCell>
+                        <TableCell>{t('admin.flagged.severity')}</TableCell>
+                        <TableCell>{t('common.actions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {loading ? (
-                        renderEmptyRow('Loading flagged users...', 6)
+                        renderEmptyRow(t('admin.flagged.loading'), 6)
                       ) : flaggedUsers.length === 0 ? (
-                        renderEmptyRow('No students are currently penalized. Everything is clear!', 6)
+                        renderEmptyRow(t('admin.flagged.empty'), 6)
                       ) : (
-                        flaggedUsers.map((user: any) => {
+                        flaggedUsers.map((user) => {
                           const needsManualReview = !user.requiresManualReview
 
                           return (
@@ -935,12 +951,12 @@ export const AdminDashboardPage = () => {
                               <TableCell>{user.id}</TableCell>
                               <TableCell>{user.name}</TableCell>
                               <TableCell>{user.email}</TableCell>
-                              <TableCell>{user.penaltyCount ?? 0} late returns / overdue returns</TableCell>
+                              <TableCell>{t('admin.flagged.sanctionsDetail', { count: user.penaltyCount ?? 0 })}</TableCell>
                               <TableCell>
                                 {needsManualReview ? (
-                                  <Chip size="small" label="MANUAL OVERRIDE REQUIRED" color="error" variant="filled" sx={{ fontWeight: 'bold' }} />
+                                  <Chip size="small" label={t('admin.flagged.manual')} color="error" variant="filled" sx={{ fontWeight: 'bold' }} />
                                 ) : (
-                                  <Chip size="small" label="TEMPORARY BLOCK" color="warning" variant="outlined" />
+                                  <Chip size="small" label={t('admin.flagged.temporary')} color="warning" variant="outlined" />
                                 )}
                               </TableCell>
                               <TableCell>
@@ -951,7 +967,7 @@ export const AdminDashboardPage = () => {
                                   disabled={busyAction !== null}
                                   onClick={() => void handleUnblockUser(user.id)}
                                 >
-                                  Unblock Student
+                                  {t('admin.flagged.unblock')}
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -971,8 +987,8 @@ export const AdminDashboardPage = () => {
             <Card>
               <CardContent>
                 <SectionHeader
-                  title="Waiting Queue Inspector"
-                  subtitle="Select any asset from the inventory to view its live reservation queue and chronological student positions."
+                  title={t('admin.waiting.title')}
+                  subtitle={t('admin.waiting.subtitle')}
                 />
                 <Box mt={3}>
                   <Autocomplete
@@ -983,8 +999,8 @@ export const AdminDashboardPage = () => {
                     onChange={(_, value) => setSelectedWaitingEquipmentId(value ? String(value.id) : null)}
                     size="small"
                     fullWidth
-                    noOptionsText="No equipment found"
-                    renderInput={(params) => <TextField {...params} label="Select Laboratory Equipment to Inspect" />}
+                    noOptionsText={t('admin.waiting.noEquipment')}
+                    renderInput={(params) => <TextField {...params} label={t('admin.waiting.select')} />}
                   />
                 </Box>
               </CardContent>
@@ -996,13 +1012,13 @@ export const AdminDashboardPage = () => {
                   <Stack spacing={2}>
                     <Box display="flex" justifyContent="space-between" alignItems="center">
                       <Typography variant="h6">
-                        Queue for:{' '}
+                        {t('admin.waiting.queueFor')}{' '}
                         <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
                           {selectedWaitingItem.name}
                         </span>
                       </Typography>
                       <Chip
-                        label={`${currentQueue.length} students waiting`}
+                        label={t('admin.waiting.studentsWaiting', { count: currentQueue.length })}
                         color={currentQueue.length > 0 ? 'primary' : 'default'}
                         size="small"
                       />
@@ -1012,13 +1028,13 @@ export const AdminDashboardPage = () => {
 
                     {loadingQueue ? (
                       <Typography color="text.secondary" sx={{ py: 2 }}>
-                        Fetching queue records...
+                        {t('admin.waiting.fetching')}
                       </Typography>
                     ) : currentQueue.length === 0 ? (
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 3, justifyContent: 'center' }}>
                         <HourglassEmptyIcon color="disabled" />
                         <Typography color="text.secondary">
-                          No students are currently waiting for this item.
+                          {t('admin.waiting.empty')}
                         </Typography>
                       </Stack>
                     ) : (
@@ -1041,12 +1057,12 @@ export const AdminDashboardPage = () => {
                               </Avatar>
 
                               <ListItemText
-                                primary={`Student User ID: #${entry.userId}`}
-                                secondary={`In queue since: ${formatDateTime(entry.requestDate)}`}
+                                primary={t('admin.waiting.studentId', { id: entry.userId })}
+                                secondary={t('admin.waiting.since', { date: formatDateTime(entry.requestDate) })}
                               />
 
                               {index === 0 && (
-                                <Chip label="Next in line" color="success" size="small" variant="outlined" />
+                                <Chip label={t('admin.waiting.next')} color="success" size="small" variant="outlined" />
                               )}
                             </ListItem>
                           </Stack>
@@ -1060,7 +1076,7 @@ export const AdminDashboardPage = () => {
               <Card variant="outlined" sx={{ borderStyle: 'dashed', backgroundColor: 'background.default' }}>
                 <CardContent sx={{ py: 5, textAlign: 'center' }}>
                   <Typography color="text.secondary">
-                    Please choose a piece of laboratory equipment above to view its live queue.
+                    {t('admin.waiting.choose')}
                   </Typography>
                 </CardContent>
               </Card>

@@ -6,6 +6,7 @@ import { AdminDashboardPage } from '../../features/admin/pages/AdminDashboardPag
 import { UserDashboardPage } from '../../features/user/pages/UserDashboardPage'
 import { RequireAuth } from './RequireAuth'
 import { RequireRole } from './RequireRole'
+import { useI18n } from '../../shared/i18n/I18nContext'
 
 const HomeRedirect = () => {
   const { session } = useAuth()
@@ -17,11 +18,12 @@ const HomeRedirect = () => {
 
 const ForbiddenPage = () => {
   const navigate = useNavigate()
+  const { t } = useI18n()
   return (
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 3 }}>
       <Stack spacing={2} maxWidth={560}>
-        <Alert severity="error">You do not have permission to access this route.</Alert>
-        <Button variant="contained" onClick={() => navigate('/', { replace: true })}>Return to dashboard</Button>
+        <Alert severity="error">{t('route.forbidden')}</Alert>
+        <Button variant="contained" onClick={() => navigate('/', { replace: true })}>{t('route.returnDashboard')}</Button>
       </Stack>
     </Box>
   )
@@ -29,11 +31,12 @@ const ForbiddenPage = () => {
 
 const NotFoundPage = () => {
   const navigate = useNavigate()
+  const { t } = useI18n()
   return (
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 3 }}>
       <Stack spacing={2} alignItems="center">
-        <Typography variant="h4">Page not found</Typography>
-        <Button variant="contained" onClick={() => navigate('/', { replace: true })}>Go home</Button>
+        <Typography variant="h4">{t('route.notFound')}</Typography>
+        <Button variant="contained" onClick={() => navigate('/', { replace: true })}>{t('route.goHome')}</Button>
       </Stack>
     </Box>
   )

@@ -3,10 +3,13 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { LanguageSwitcher } from '../../../shared/i18n/LanguageSwitcher'
+import { useI18n } from '../../../shared/i18n/I18nContext'
 
 export const LoginPage = () => {
   const navigate = useNavigate()
   const { session, login } = useAuth()
+  const { t } = useI18n()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -21,7 +24,7 @@ export const LoginPage = () => {
     event.preventDefault()
 
     if (!username.trim() || !password.trim()) {
-      setErrorMessage('Username and password are required.')
+      setErrorMessage(t('login.required'))
       return
     }
 
@@ -32,7 +35,7 @@ export const LoginPage = () => {
       const authSession = await login({ username: username.trim(), password })
       navigate(authSession.role === 'ADMIN' ? '/admin' : '/user', { replace: true })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to log in.'
+      const message = error instanceof Error ? error.message : t('login.failed')
       setErrorMessage(message)
     } finally {
       setIsSubmitting(false)
@@ -53,31 +56,34 @@ export const LoginPage = () => {
       <Card sx={{ width: '100%', maxWidth: 460 }}>
         <CardContent sx={{ p: 4 }}>
           <Stack spacing={2.5} component="form" onSubmit={onSubmit}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <LanguageSwitcher />
+            </Box>
             <Typography variant="h4" fontWeight={700}>
               LabLend
             </Typography>
-            <Typography color="text.secondary">Sign in to continue to your workspace.</Typography>
+            <Typography color="text.secondary">{t('login.subtitle')}</Typography>
 
             {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
 
             <TextField
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              label="Username"
+              label={t('login.username')}
               autoComplete="username"
               fullWidth
             />
             <TextField
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              label="Password"
+              label={t('login.password')}
               type="password"
               autoComplete="current-password"
               fullWidth
             />
 
             <Button variant="contained" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing in...' : 'Sign in'}
+              {isSubmitting ? t('login.submitting') : t('login.submit')}
             </Button>
           </Stack>
         </CardContent>

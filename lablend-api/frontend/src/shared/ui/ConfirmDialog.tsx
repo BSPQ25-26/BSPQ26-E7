@@ -1,4 +1,5 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material'
+import { useI18n } from '../i18n/I18nContext'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -15,12 +16,14 @@ export const ConfirmDialog = ({
   open,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   danger = false,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) => {
+  const { t } = useI18n()
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{title}</DialogTitle>
@@ -29,10 +32,10 @@ export const ConfirmDialog = ({
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3 }}>
         <Button onClick={onClose} variant="text">
-          {cancelLabel}
+          {cancelLabel ?? t('common.cancel')}
         </Button>
         <Button onClick={onConfirm} variant="contained" color={danger ? 'error' : 'primary'}>
-          {confirmLabel}
+          {confirmLabel ?? t('common.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

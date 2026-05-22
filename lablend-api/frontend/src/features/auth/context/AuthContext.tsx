@@ -3,6 +3,7 @@ import type { PropsWithChildren } from 'react'
 import { authService } from '../../../services/authService'
 import { parseJwtClaims, isExpired } from '../../../shared/auth/jwtClaims'
 import type { UserRole } from '../../../shared/types/domain'
+import { useI18n } from '../../../shared/i18n/I18nContext'
 
 export interface AuthSession {
   token: string
@@ -40,6 +41,7 @@ const buildSessionFromToken = (token: string): AuthSession | null => {
 }
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
+  const { t } = useI18n()
   const [session, setSession] = useState<AuthSession | null>(() => {
     const token = authService.getToken()
     if (!token) {
@@ -68,7 +70,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const nextSession = buildSessionFromToken(token)
         if (!nextSession) {
           authService.logout()
-          throw new Error('Login succeeded but the token does not contain role and user identity claims.')
+          throw new Error(t('login.invalidToken'))
         }
 
         setSession(nextSession)
@@ -79,7 +81,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         setSession(null)
       },
     }),
-    [session],
+    [session, t],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
