@@ -30,11 +30,12 @@ export const userService = {
   },
 
   unblock(id: number): Promise<void> {
-    return httpClient.put<void, {}>(`/users/${id}/unblock`, {})
+    return httpClient.put<void, Record<string, never>>(`/users/${id}/unblock`, {})
   },
   
   block(id: number): Promise<void> {
-    return httpClient.put<void, {}>(`/users/${id}/block`, {})  }
+    return httpClient.put<void, Record<string, never>>(`/users/${id}/block`, {})
+  },
 }
 
 export type { SaveUserPayload }

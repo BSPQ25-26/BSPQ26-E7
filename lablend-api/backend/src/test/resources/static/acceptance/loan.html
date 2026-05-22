@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Acceptance Test</title>
+    <style>
+        body {
+            color: #17212b;
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+            max-width: 720px;
+        }
+
+        form {
+            display: grid;
+            gap: 0.75rem;
+            max-width: 360px;
+        }
+
+        input,
+        button {
+            font-size: 1rem;
+            padding: 0.6rem;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        .message {
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        .success {
+            color: #146c43;
+        }
+
+        .error {
+            color: #b42318;
+        }
+
+        .result {
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Loan Acceptance Flow</h1>
+
+    <form id="loanForm">
+        <label for="userId">User ID</label>
+        <input id="userId" name="userId" type="number" required>
+
+        <label for="equipmentId">Equipment ID</label>
+        <input id="equipmentId" name="equipmentId" type="number" required>
+
+        <button id="createLoanBtn" type="submit">Create loan</button>
+    </form>
+
+    <div id="message" class="message"></div>
+    <div id="loanDetails" class="result"></div>
+    <div id="equipmentStatus" class="result"></div>
+
+    <script>
+        async function loadEquipmentStatus(equipmentId) {
+            const status = document.getElementById('equipmentStatus');
+            const response = await fetch(`/api/equipment/${equipmentId}`);
+
+            if (!response.ok) {
+                status.textContent = 'Equipment status: unavailable';
+                return;
+            }
+
+            const equipment = await response.json();
+            status.textContent = `Equipment status: ${equipment.status}`;
+        }
+
+        async function createLoan(event) {
+            event.preventDefault();
+
+            const message = document.getElementById('message');
+            const details = document.getElementById('loanDetails');
+            const userId = Number(document.getElementById('userId').value);
+            const equipmentId = Number(document.getElementById('equipmentId').value);
+
+            message.textContent = '';
+            message.className = 'message';
+            details.textContent = '';
+
+            const response = await fetch('/api/loans', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId, equipmentId })
+            });
+
+            const body = await response.json();
+
+            if (!response.ok) {
+                message.textContent = `Loan request failed: ${body.message || response.status}`;
+                message.classList.add('error');
+                await loadEquipmentStatus(equipmentId);
+                return;
+            }
+
+            message.textContent = `Loan created #${body.id}`;
+            message.classList.add('success');
+            details.textContent = `User ${body.userId} borrowed equipment ${body.equipmentId}`;
+            await loadEquipmentStatus(equipmentId);
+        }
+
+        document.getElementById('loanForm').addEventListener('submit', createLoan);
+    </script>
+</body>
+</html>
